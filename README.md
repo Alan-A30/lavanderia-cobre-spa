@@ -280,14 +280,6 @@ Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más det
 
 ---
 
-## Contacto
-
-**Desarrollador**: Tu Nombre  
-**Email**: tu-email@ejemplo.com  
-**Proyecto**: [GitHub](https://github.com/tu-usuario/lavanderia-react-firebase)
-
----
-
 <div align="center">
   <p>Hecho con React y TypeScript</p>
   <p>© 2024 Lavandería el Cobre SPA</p>
