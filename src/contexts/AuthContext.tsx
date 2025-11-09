@@ -3,7 +3,6 @@ import {
   signInWithEmailAndPassword, 
   signOut as firebaseSignOut,
   onAuthStateChanged,
-  User as FirebaseUser
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { User } from '@/types';

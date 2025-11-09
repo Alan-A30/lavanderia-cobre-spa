@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useProducts } from '@/hooks/useProducts';
 import { Link } from 'react-router-dom';
 import { Pencil, Trash2, Plus, Search } from 'lucide-react';
-import { toast } from 'sonner';
 
 export default function ProductList() {
   const { products, loading, deleteProduct } = useProducts();
