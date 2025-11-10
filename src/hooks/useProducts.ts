@@ -5,7 +5,6 @@ import {
   updateDoc,
   deleteDoc,
   doc,
-  getDocs,
   query,
   orderBy,
   Timestamp,
