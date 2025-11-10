@@ -3,6 +3,7 @@ import {
   signInWithEmailAndPassword, 
   signOut as firebaseSignOut,
   onAuthStateChanged,
+  User as FirebaseUser
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { User } from '@/types';
@@ -27,7 +28,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           uid: firebaseUser.uid,
           email: firebaseUser.email!,
           displayName: firebaseUser.displayName || 'Usuario',
-          role: 'admin' // Puedes obtener esto de Firestore
+          role: 'admin'
         });
       } else {
         setUser(null);

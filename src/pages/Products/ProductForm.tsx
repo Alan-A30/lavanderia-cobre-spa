@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useProducts } from '@/hooks/useProducts';
 import { useSuppliers } from '@/hooks/useSuppliers';
+import { Product } from '@/types';
 
 const productSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido'),
