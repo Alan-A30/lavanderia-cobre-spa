@@ -2,7 +2,7 @@ export interface User {
   uid: string;
   email: string;
   displayName: string;
-  role: 'admin' | 'user';
+  role: 'admin' | 'operario';
 }
 
 export interface Product {
@@ -29,11 +29,12 @@ export interface Supplier {
 
 export interface HistoryRecord {
   id: string;
-  action: 'create' | 'update' | 'delete';
+  action: 'create' | 'update' | 'delete' | 'remove_stock' | 'add_stock';
   entityType: 'product' | 'supplier' | 'user';
   entityId: string;
   userId: string;
   userName: string;
   timestamp: Date;
   changes?: Record<string, any>;
+  entityName?: string;
 }

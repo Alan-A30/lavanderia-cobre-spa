@@ -5,7 +5,7 @@ import { Pencil, Trash2, Plus, Search } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function ProductRegister() {
-  const { products, loading, deleteProduct, updateProduct } = useProducts();
+  const { products, loading, deleteProduct, addToInventory } = useProducts();
   const [searchTerm, setSearchTerm] = useState('');
 
   const [selectedProduct, setSelectedProduct] = useState<{
@@ -15,6 +15,13 @@ export default function ProductRegister() {
     supplier: string;
     price: number;
     quantity: number;
+    brand?: string;
+    unit?: string;
+  } | null>(null);
+
+  const [productToDelete, setProductToDelete] = useState<{
+    id: string;
+    name: string;
   } | null>(null);
 
   const [quantityToAdd, setQuantityToAdd] = useState<number>(0);
@@ -24,14 +31,19 @@ export default function ProductRegister() {
     product.category.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleDelete = async (id: string, name: string) => {
-    if (window.confirm(`¿Estás seguro de eliminar el producto "${name}"?`)) {
-      await deleteProduct(id);
+  const handleDeleteClick = (id: string, name: string, event: any) => {
+    event.stopPropagation();
+    setProductToDelete({ id, name });
+  };
+
+  const confirmDelete = async () => {
+    if (productToDelete) {
+      await deleteProduct(productToDelete.id, productToDelete.name);
+      setProductToDelete(null);
     }
   };
 
   const handleRowClick = (product: any, event: any) => {
-    // Evitar que se abra el modal si se hace clic en los botones de acción
     if (event.target.closest('button') || event.target.closest('a')) {
       return;
     }
@@ -47,10 +59,7 @@ export default function ProductRegister() {
       return;
     }
 
-    const updatedQuantity = selectedProduct.quantity + quantityToAdd;
-    await updateProduct(selectedProduct.id, { quantity: updatedQuantity });
-
-    toast.success(`Se agregaron ${quantityToAdd} unidades de ${selectedProduct.name}`);
+    await addToInventory(selectedProduct.id, quantityToAdd, selectedProduct.name);
     setSelectedProduct(null);
   };
 
@@ -93,10 +102,11 @@ export default function ProductRegister() {
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Marca</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoría</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cantidad</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unidad</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Proveedor</th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
             </tr>
           </thead>
@@ -113,10 +123,11 @@ export default function ProductRegister() {
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                   {product.name}
                 </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.brand || '-'}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.category}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.quantity}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.unit || '-'}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${product.price.toLocaleString()}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.supplier}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <Link 
                     to={`/productos/editar/${product.id}`} 
@@ -126,10 +137,7 @@ export default function ProductRegister() {
                     <Pencil size={18} className="inline" />
                   </Link>
                   <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(product.id, product.name);
-                    }} 
+                    onClick={(e) => handleDeleteClick(product.id, product.name, e)} 
                     className="text-red-600 hover:text-red-900"
                   >
                     <Trash2 size={18} className="inline" />
@@ -156,9 +164,19 @@ export default function ProductRegister() {
             <div className="text-sm text-gray-600 mb-2">
               <strong>Nombre:</strong> {selectedProduct.name}
             </div>
+            {selectedProduct.brand && (
+              <div className="text-sm text-gray-600 mb-2">
+                <strong>Marca:</strong> {selectedProduct.brand}
+              </div>
+            )}
             <div className="text-sm text-gray-600 mb-2">
               <strong>Categoría:</strong> {selectedProduct.category}
             </div>
+            {selectedProduct.unit && (
+              <div className="text-sm text-gray-600 mb-2">
+                <strong>Unidad:</strong> {selectedProduct.unit}
+              </div>
+            )}
             <div className="text-sm text-gray-600 mb-2">
               <strong>Proveedor:</strong> {selectedProduct.supplier}
             </div>
@@ -198,6 +216,49 @@ export default function ProductRegister() {
                 className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
               >
                 Registrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {productToDelete && (
+        <div 
+          className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50"
+          onClick={() => setProductToDelete(null)}
+        >
+          <div className="bg-white rounded-lg shadow-lg p-6 w-96" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                <Trash2 className="text-red-600" size={24} />
+              </div>
+              <h2 className="text-xl font-bold text-gray-800">Eliminar Producto</h2>
+            </div>
+
+            <p className="text-gray-700 mb-2">
+              ¿Estás seguro de que deseas eliminar este producto?
+            </p>
+            
+            <div className="bg-gray-50 rounded-lg p-3 mb-4">
+              <p className="font-semibold text-gray-800">{productToDelete.name}</p>
+            </div>
+
+            <p className="text-sm text-red-600 mb-4">
+              Esta acción no se puede deshacer.
+            </p>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setProductToDelete(null)}
+                className="px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+              >
+                Eliminar
               </button>
             </div>
           </div>

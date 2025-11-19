@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -7,8 +7,15 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn } = useAuth();
+  const { signIn, user } = useAuth();
   const navigate = useNavigate();
+
+  // Redirigir automáticamente si el usuario ya está autenticado
+  useEffect(() => {
+    if (user) {
+      navigate('/');
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -17,11 +24,10 @@ export default function Login() {
     try {
       await signIn(email, password);
       toast.success('Inicio de sesión exitoso');
-      navigate('/');
+      // No hacer navigate aquí, el useEffect lo manejará cuando user cambie
     } catch (error) {
       toast.error('Error al iniciar sesión. Verifica tus credenciales.');
-    } finally {
-      setLoading(false);
+      setLoading(false); // Solo desactivar loading si hay error
     }
   };
 

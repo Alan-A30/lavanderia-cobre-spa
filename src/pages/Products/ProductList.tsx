@@ -3,9 +3,11 @@ import { useProducts } from '@/hooks/useProducts';
 import { Link } from 'react-router-dom';
 import { Pencil, Trash2, Plus, Search } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function ProductList() {
-  const { products, loading, deleteProduct, updateProduct } = useProducts();
+  const { products, loading, deleteProduct, removeFromInventory } = useProducts();
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
 
   const [selectedProduct, setSelectedProduct] = useState<{
@@ -19,16 +21,29 @@ export default function ProductList() {
     unit?: string;
   } | null>(null);
 
+  const [productToDelete, setProductToDelete] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+
   const [quantityToRemove, setQuantityToRemove] = useState<number>(0);
+
+  const isAdmin = user?.role === 'admin';
 
   const filteredProducts = products.filter((product) =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     product.category.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleDelete = async (id: string, name: string) => {
-    if (window.confirm(`¿Estás seguro de eliminar el producto "${name}"?`)) {
-      await deleteProduct(id);
+  const handleDeleteClick = (id: string, name: string, event: any) => {
+    event.stopPropagation();
+    setProductToDelete({ id, name });
+  };
+
+  const confirmDelete = async () => {
+    if (productToDelete) {
+      await deleteProduct(productToDelete.id, productToDelete.name);
+      setProductToDelete(null);
     }
   };
 
@@ -36,6 +51,7 @@ export default function ProductList() {
     if (event.target.closest('button') || event.target.closest('a')) {
       return;
     }
+    
     setSelectedProduct(product);
     setQuantityToRemove(0);
   };
@@ -53,10 +69,7 @@ export default function ProductList() {
       return;
     }
 
-    const updatedQuantity = selectedProduct.quantity - quantityToRemove;
-    await updateProduct(selectedProduct.id, { quantity: updatedQuantity });
-
-    toast.success(`Se retiraron ${quantityToRemove} unidades de ${selectedProduct.name}`);
+    await removeFromInventory(selectedProduct.id, quantityToRemove, selectedProduct.name);
     setSelectedProduct(null);
   };
 
@@ -72,13 +85,15 @@ export default function ProductList() {
     <div className="p-8">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold text-gray-800">Inventario</h1>
-        <Link
-          to="/productos/crear"
-          className="flex items-center gap-2 bg-orange-500 text-white px-6 py-3 rounded-lg hover:bg-orange-600 transition-colors"
-        >
-          <Plus size={20} />
-          Nuevo Producto
-        </Link>
+        {isAdmin && (
+          <Link
+            to="/productos/crear"
+            className="flex items-center gap-2 bg-orange-500 text-white px-6 py-3 rounded-lg hover:bg-orange-600 transition-colors"
+          >
+            <Plus size={20} />
+            Nuevo Producto
+          </Link>
+        )}
       </div>
 
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
@@ -104,7 +119,9 @@ export default function ProductList() {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cantidad</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unidad</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+              {isAdmin && (
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+              )}
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -125,24 +142,23 @@ export default function ProductList() {
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.quantity}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.unit || '-'}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${product.price.toLocaleString()}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <Link 
-                    to={`/productos/editar/${product.id}`} 
-                    className="text-blue-600 hover:text-blue-900 mr-4"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <Pencil size={18} className="inline" />
-                  </Link>
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(product.id, product.name);
-                    }} 
-                    className="text-red-600 hover:text-red-900"
-                  >
-                    <Trash2 size={18} className="inline" />
-                  </button>
-                </td>
+                {isAdmin && (
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <Link 
+                      to={`/productos/editar/${product.id}`} 
+                      className="text-blue-600 hover:text-blue-900 mr-4"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Pencil size={18} className="inline" />
+                    </Link>
+                    <button 
+                      onClick={(e) => handleDeleteClick(product.id, product.name, e)} 
+                      className="text-red-600 hover:text-red-900"
+                    >
+                      <Trash2 size={18} className="inline" />
+                    </button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -210,6 +226,49 @@ export default function ProductList() {
                 className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
               >
                 Retirar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {productToDelete && (
+        <div 
+          className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50"
+          onClick={() => setProductToDelete(null)}
+        >
+          <div className="bg-white rounded-lg shadow-lg p-6 w-96" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                <Trash2 className="text-red-600" size={24} />
+              </div>
+              <h2 className="text-xl font-bold text-gray-800">Eliminar Producto</h2>
+            </div>
+
+            <p className="text-gray-700 mb-2">
+              ¿Estás seguro de que deseas eliminar este producto?
+            </p>
+            
+            <div className="bg-gray-50 rounded-lg p-3 mb-4">
+              <p className="font-semibold text-gray-800">{productToDelete.name}</p>
+            </div>
+
+            <p className="text-sm text-red-600 mb-4">
+              Esta acción no se puede deshacer.
+            </p>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setProductToDelete(null)}
+                className="px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+              >
+                Eliminar
               </button>
             </div>
           </div>

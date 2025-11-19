@@ -1,7 +1,7 @@
 import { useHistory } from '@/hooks/useHistory';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { FileText, Package, Users, UserPlus, Pencil, Trash2, PlusCircle } from 'lucide-react';
+import { FileText, Package, Users, UserPlus, Pencil, Trash2, PlusCircle, MinusCircle } from 'lucide-react';
 
 export default function History() {
   const { history, loading } = useHistory(100);
@@ -14,6 +14,10 @@ export default function History() {
         return <Pencil size={20} className="text-blue-600" />;
       case 'delete':
         return <Trash2 size={20} className="text-red-600" />;
+      case 'add_stock':
+        return <PlusCircle size={20} className="text-green-600" />;
+      case 'remove_stock':
+        return <MinusCircle size={20} className="text-orange-600" />;
       default:
         return <FileText size={20} className="text-gray-600" />;
     }
@@ -35,8 +39,10 @@ export default function History() {
   const getActionText = (action: string) => {
     const actions = {
       create: 'creó',
-      update: 'actualizó',
+      update: 'editó',
       delete: 'eliminó',
+      remove_stock: 'retiró del inventario',
+      add_stock: 'agregó al inventario',
     };
     return actions[action as keyof typeof actions] || action;
   };
@@ -67,6 +73,7 @@ export default function History() {
       minStock: 'Stock mínimo',
       maxStock: 'Stock máximo',
       unit: 'Unidad',
+      barcode: 'Código de barras',
       sku: 'SKU',
       brand: 'Marca',
       model: 'Modelo',
@@ -74,6 +81,10 @@ export default function History() {
       status: 'Estado',
       createdAt: 'Fecha de creación',
       updatedAt: 'Última actualización',
+      quantityAdded: 'Cantidad agregada',
+      quantityRemoved: 'Cantidad retirada',
+      previousQuantity: 'Cantidad anterior',
+      newQuantity: 'Cantidad nueva',
     };
 
     if (!changes || typeof changes !== 'object') {
@@ -126,7 +137,9 @@ export default function History() {
                     <p className="text-gray-900">
                       <span className="font-semibold">{record.userName}</span>
                       {' '}{getActionText(record.action)}{' '}
-                      <span className="font-medium">{getEntityText(record.entityType)}</span>
+                      {record.entityName && (
+                        <span className="font-medium text-orange-600">"{record.entityName}"</span>
+                      )}
                     </p>
                     <span className="text-sm text-gray-500">
                       {format(record.timestamp, "dd 'de' MMMM, yyyy - HH:mm", { locale: es })}

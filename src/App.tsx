@@ -36,6 +36,36 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Componente para rutas solo de administrador
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-100 to-orange-200">
+        <div className="text-xl font-semibold text-orange-600">Cargando...</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" />;
+  }
+
+  if (user.role !== 'admin') {
+    return <Navigate to="/" />;
+  }
+
+  return (
+    <div className="flex">
+      <Sidebar />
+      <main className="ml-64 flex-1 min-h-screen bg-gradient-to-br from-orange-50 to-orange-100">
+        {children}
+      </main>
+    </div>
+  );
+}
+
 function App() {
   return (
     <BrowserRouter>
@@ -53,6 +83,7 @@ function App() {
             }
           />
           
+          {/* Inventario - Todos pueden ver */}
           <Route
             path="/productos"
             element={
@@ -62,66 +93,71 @@ function App() {
             }
           />
           
+          {/* Solo Admin - Crear Producto */}
           <Route
             path="/productos/crear"
             element={
-              <ProtectedRoute>
+              <AdminRoute>
                 <ProductForm />
-              </ProtectedRoute>
+              </AdminRoute>
             }
           />
           
+          {/* Solo Admin - Editar Producto */}
           <Route
             path="/productos/editar/:id"
             element={
-              <ProtectedRoute>
+              <AdminRoute>
                 <ProductForm />
-              </ProtectedRoute>
+              </AdminRoute>
             }
           />
           
+          {/* Solo Admin - Registrar Productos */}
           <Route
             path="/productos/registrar"
             element={
-              <ProtectedRoute>
+              <AdminRoute>
                 <ProductRegister />
-              </ProtectedRoute>
+              </AdminRoute>
             }
           />
           
+          {/* Solo Admin - Proveedores */}
           <Route
             path="/proveedores"
             element={
-              <ProtectedRoute>
+              <AdminRoute>
                 <SupplierList />
-              </ProtectedRoute>
+              </AdminRoute>
             }
           />
           
           <Route
             path="/proveedores/crear"
             element={
-              <ProtectedRoute>
+              <AdminRoute>
                 <SupplierForm />
-              </ProtectedRoute>
+              </AdminRoute>
             }
           />
           
           <Route
             path="/proveedores/editar/:id"
             element={
-              <ProtectedRoute>
+              <AdminRoute>
                 <SupplierForm />
-              </ProtectedRoute>
+              </AdminRoute>
             }
           />
           
+          {/* Solo Admin - Historial */}
           <Route
             path="/historial"
             element={
-              <ProtectedRoute>
+              <AdminRoute>
                 <History />
-              </ProtectedRoute>
+              </AdminRoute>
             }
           />
         </Routes>

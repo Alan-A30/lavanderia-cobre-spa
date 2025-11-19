@@ -8,7 +8,8 @@ import {
   query,
   orderBy,
   Timestamp,
-  onSnapshot
+  onSnapshot,
+  getDoc
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Product } from '@/types';
@@ -57,6 +58,7 @@ export function useProducts() {
         entityId: docRef.id,
         userId: user!.uid,
         userName: user!.displayName,
+        entityName: productData.name,
         changes: productData,
       });
 
@@ -72,6 +74,10 @@ export function useProducts() {
   const updateProduct = async (id: string, productData: Partial<Product>) => {
     try {
       const productRef = doc(db, 'products', id);
+      
+      const productDoc = await getDoc(productRef);
+      const productName = productDoc.data()?.name || '';
+
       await updateDoc(productRef, {
         ...productData,
         updatedAt: Timestamp.now(),
@@ -83,6 +89,7 @@ export function useProducts() {
         entityId: id,
         userId: user!.uid,
         userName: user!.displayName,
+        entityName: productName,
         changes: productData,
       });
 
@@ -94,7 +101,75 @@ export function useProducts() {
     }
   };
 
-  const deleteProduct = async (id: string) => {
+  const removeFromInventory = async (id: string, quantityToRemove: number, productName: string) => {
+    try {
+      const productRef = doc(db, 'products', id);
+      const productDoc = await getDoc(productRef);
+      const currentQuantity = productDoc.data()?.quantity || 0;
+      const newQuantity = currentQuantity - quantityToRemove;
+
+      await updateDoc(productRef, {
+        quantity: newQuantity,
+        updatedAt: Timestamp.now(),
+      });
+
+      await addHistoryRecord({
+        action: 'remove_stock',
+        entityType: 'product',
+        entityId: id,
+        userId: user!.uid,
+        userName: user!.displayName,
+        entityName: productName,
+        changes: { 
+          quantityRemoved: quantityToRemove,
+          previousQuantity: currentQuantity,
+          newQuantity: newQuantity
+        },
+      });
+
+      toast.success(`Se retiraron ${quantityToRemove} unidades de ${productName}`);
+    } catch (error) {
+      console.error('Error removing from inventory:', error);
+      toast.error('Error al retirar del inventario');
+      throw error;
+    }
+  };
+
+  const addToInventory = async (id: string, quantityToAdd: number, productName: string) => {
+    try {
+      const productRef = doc(db, 'products', id);
+      const productDoc = await getDoc(productRef);
+      const currentQuantity = productDoc.data()?.quantity || 0;
+      const newQuantity = currentQuantity + quantityToAdd;
+
+      await updateDoc(productRef, {
+        quantity: newQuantity,
+        updatedAt: Timestamp.now(),
+      });
+
+      await addHistoryRecord({
+        action: 'add_stock',
+        entityType: 'product',
+        entityId: id,
+        userId: user!.uid,
+        userName: user!.displayName,
+        entityName: productName,
+        changes: { 
+          quantityAdded: quantityToAdd,
+          previousQuantity: currentQuantity,
+          newQuantity: newQuantity
+        },
+      });
+
+      toast.success(`Se agregaron ${quantityToAdd} unidades de ${productName}`);
+    } catch (error) {
+      console.error('Error adding to inventory:', error);
+      toast.error('Error al agregar al inventario');
+      throw error;
+    }
+  };
+
+  const deleteProduct = async (id: string, productName: string) => {
     try {
       await deleteDoc(doc(db, 'products', id));
 
@@ -104,6 +179,7 @@ export function useProducts() {
         entityId: id,
         userId: user!.uid,
         userName: user!.displayName,
+        entityName: productName,
       });
 
       toast.success('Producto eliminado exitosamente');
@@ -114,5 +190,13 @@ export function useProducts() {
     }
   };
 
-  return { products, loading, addProduct, updateProduct, deleteProduct };
+  return { 
+    products, 
+    loading, 
+    addProduct, 
+    updateProduct, 
+    deleteProduct,
+    removeFromInventory,
+    addToInventory
+  };
 }

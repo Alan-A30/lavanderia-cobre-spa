@@ -15,7 +15,8 @@ export function Sidebar() {
   const location = useLocation();
   const { user, signOut } = useAuth();
 
-  const menuItems = [
+  // Menú completo para ADMINISTRADOR
+  const adminMenuItems = [
     { 
       title: 'PRINCIPAL', 
       items: [
@@ -43,6 +44,25 @@ export function Sidebar() {
       ]
     }
   ];
+
+  // Menú limitado para OPERARIO
+  const operarioMenuItems = [
+    { 
+      title: 'PRINCIPAL', 
+      items: [
+        { name: 'Dashboard', path: '/', icon: LayoutDashboard }
+      ]
+    },
+    { 
+      title: 'INVENTARIO', 
+      items: [
+        { name: 'Inventario', path: '/productos', icon: Package }
+      ]
+    }
+  ];
+
+  // Seleccionar menú según rol
+  const menuItems = user?.role === 'admin' ? adminMenuItems : operarioMenuItems;
 
   return (
     <aside className="w-64 bg-gradient-to-b from-orange-500 to-orange-600 text-white min-h-screen fixed left-0 top-0">
@@ -73,7 +93,9 @@ export function Sidebar() {
           </div>
           <div className="min-w-0 flex-1">
             <p className="font-medium truncate">{user?.displayName}</p>
-            <p className="text-xs text-orange-100">Administrador</p>
+            <p className="text-xs text-orange-100 capitalize">
+              {user?.role === 'admin' ? 'Administrador' : 'Operario'}
+            </p>
           </div>
         </div>
       </div>

@@ -4,7 +4,8 @@ import {
   signOut as firebaseSignOut,
   onAuthStateChanged,
 } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase';
 import { User } from '@/types';
 
 interface AuthContextType {
@@ -23,12 +24,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        setUser({
-          uid: firebaseUser.uid,
-          email: firebaseUser.email!,
-          displayName: firebaseUser.displayName || 'Usuario',
-          role: 'admin'
-        });
+        try {
+          // Intentar obtener el rol desde Firestore
+          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+          const userData = userDoc.data();
+          
+          setUser({
+            uid: firebaseUser.uid,
+            email: firebaseUser.email!,
+            displayName: firebaseUser.displayName || userData?.displayName || 'Usuario',
+            role: userData?.role || 'operario' // Por defecto: operario
+          });
+        } catch (error) {
+          console.error('Error al obtener rol del usuario:', error);
+          setUser({
+            uid: firebaseUser.uid,
+            email: firebaseUser.email!,
+            displayName: firebaseUser.displayName || 'Usuario',
+            role: 'operario'
+          });
+        }
       } else {
         setUser(null);
       }
