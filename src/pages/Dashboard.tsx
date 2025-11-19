@@ -54,15 +54,6 @@ export default function Dashboard() {
     return actions[action as keyof typeof actions] || action;
   };
 
-  const getEntityText = (entityType: string) => {
-    const entities = {
-      product: 'producto',
-      supplier: 'proveedor',
-      user: 'usuario',
-    };
-    return entities[entityType as keyof typeof entities] || entityType;
-  };
-
   if (!isAdmin) {
     return (
       <div className="p-8">

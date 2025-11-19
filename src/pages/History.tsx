@@ -47,15 +47,6 @@ export default function History() {
     return actions[action as keyof typeof actions] || action;
   };
 
-  const getEntityText = (entityType: string) => {
-    const entities = {
-      product: 'producto',
-      supplier: 'proveedor',
-      user: 'usuario',
-    };
-    return entities[entityType as keyof typeof entities] || entityType;
-  };
-
   const formatChanges = (changes: any) => {
     const fieldLabels: { [key: string]: string } = {
       name: 'Nombre',
