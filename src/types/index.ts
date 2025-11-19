@@ -12,6 +12,8 @@ export interface Product {
   price: number;
   category: string;
   supplier: string;
+  brand: string;
+  unit: string;
   createdAt: Date;
   updatedAt: Date;
 }

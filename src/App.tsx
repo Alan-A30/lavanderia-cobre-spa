@@ -6,6 +6,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import ProductList from './pages/Products/ProductList';
 import ProductForm from './pages/Products/ProductForm';
+import ProductRegister from './pages/Products/ProductRegister';
 import SupplierList from './pages/Suppliers/SupplierList';
 import SupplierForm from './pages/Suppliers/SupplierForm';
 import History from './pages/History';
@@ -83,7 +84,7 @@ function App() {
             path="/productos/registrar"
             element={
               <ProtectedRoute>
-                <ProductList />
+                <ProductRegister />
               </ProtectedRoute>
             }
           />
@@ -120,18 +121,6 @@ function App() {
             element={
               <ProtectedRoute>
                 <History />
-              </ProtectedRoute>
-            }
-          />
-          
-          <Route
-            path="/usuarios"
-            element={
-              <ProtectedRoute>
-                <div className="p-8">
-                  <h1 className="text-3xl font-bold">Usuarios</h1>
-                  <p className="mt-4 text-gray-600">Página en construcción...</p>
-                </div>
               </ProtectedRoute>
             }
           />

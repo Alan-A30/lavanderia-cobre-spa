@@ -50,6 +50,55 @@ export default function History() {
     return entities[entityType as keyof typeof entities] || entityType;
   };
 
+  const formatChanges = (changes: any) => {
+    const fieldLabels: { [key: string]: string } = {
+      name: 'Nombre',
+      quantity: 'Cantidad',
+      price: 'Precio',
+      category: 'Categoría',
+      supplier: 'Proveedor',
+      email: 'Correo electrónico',
+      phone: 'Teléfono',
+      address: 'Dirección',
+      contact: 'Contacto',
+      notes: 'Notas',
+      description: 'Descripción',
+      stock: 'Stock',
+      minStock: 'Stock mínimo',
+      maxStock: 'Stock máximo',
+      unit: 'Unidad',
+      sku: 'SKU',
+      brand: 'Marca',
+      model: 'Modelo',
+      location: 'Ubicación',
+      status: 'Estado',
+      createdAt: 'Fecha de creación',
+      updatedAt: 'Última actualización',
+    };
+
+    if (!changes || typeof changes !== 'object') {
+      return null;
+    }
+
+    return (
+      <div className="space-y-1.5">
+        {Object.entries(changes).map(([key, value]) => {
+          const label = fieldLabels[key] || key.charAt(0).toUpperCase() + key.slice(1);
+          const displayValue = typeof value === 'object' && value !== null
+            ? JSON.stringify(value)
+            : String(value);
+
+          return (
+            <div key={key} className="flex gap-2">
+              <span className="font-medium text-gray-700 min-w-[120px]">{label}:</span>
+              <span className="text-gray-600">{displayValue}</span>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="p-8 flex items-center justify-center">
@@ -85,11 +134,9 @@ export default function History() {
                   </div>
                   
                   {record.changes && (
-                    <div className="mt-2 p-3 bg-gray-50 rounded text-sm">
-                      <p className="text-gray-600 font-medium mb-1">Cambios:</p>
-                      <pre className="text-gray-700 overflow-x-auto">
-                        {JSON.stringify(record.changes, null, 2)}
-                      </pre>
+                    <div className="mt-2 p-4 bg-gray-50 rounded text-sm">
+                      <p className="text-gray-600 font-medium mb-3">Detalles:</p>
+                      {formatChanges(record.changes)}
                     </div>
                   )}
                 </div>

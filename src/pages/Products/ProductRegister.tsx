@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { Pencil, Trash2, Plus, Search } from 'lucide-react';
 import { toast } from 'sonner';
 
-export default function ProductList() {
+export default function ProductRegister() {
   const { products, loading, deleteProduct, updateProduct } = useProducts();
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -15,11 +15,9 @@ export default function ProductList() {
     supplier: string;
     price: number;
     quantity: number;
-    brand?: string;
-    unit?: string;
   } | null>(null);
 
-  const [quantityToRemove, setQuantityToRemove] = useState<number>(0);
+  const [quantityToAdd, setQuantityToAdd] = useState<number>(0);
 
   const filteredProducts = products.filter((product) =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -33,37 +31,33 @@ export default function ProductList() {
   };
 
   const handleRowClick = (product: any, event: any) => {
+    // Evitar que se abra el modal si se hace clic en los botones de acción
     if (event.target.closest('button') || event.target.closest('a')) {
       return;
     }
     setSelectedProduct(product);
-    setQuantityToRemove(0);
+    setQuantityToAdd(0);
   };
 
-  const handleRemoveQuantity = async () => {
+  const handleAddQuantity = async () => {
     if (!selectedProduct) return;
 
-    if (quantityToRemove <= 0) {
+    if (quantityToAdd <= 0) {
       toast.error('Debes ingresar una cantidad válida');
       return;
     }
 
-    if (quantityToRemove > selectedProduct.quantity) {
-      toast.error('No puedes retirar más de lo disponible');
-      return;
-    }
-
-    const updatedQuantity = selectedProduct.quantity - quantityToRemove;
+    const updatedQuantity = selectedProduct.quantity + quantityToAdd;
     await updateProduct(selectedProduct.id, { quantity: updatedQuantity });
 
-    toast.success(`Se retiraron ${quantityToRemove} unidades de ${selectedProduct.name}`);
+    toast.success(`Se agregaron ${quantityToAdd} unidades de ${selectedProduct.name}`);
     setSelectedProduct(null);
   };
 
   if (loading) {
     return (
       <div className="p-8 flex items-center justify-center">
-        <div className="text-xl">Cargando inventario...</div>
+        <div className="text-xl">Cargando productos...</div>
       </div>
     );
   }
@@ -71,7 +65,7 @@ export default function ProductList() {
   return (
     <div className="p-8">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-800">Inventario</h1>
+        <h1 className="text-3xl font-bold text-gray-800">Registrar Productos</h1>
         <Link
           to="/productos/crear"
           className="flex items-center gap-2 bg-orange-500 text-white px-6 py-3 rounded-lg hover:bg-orange-600 transition-colors"
@@ -86,7 +80,7 @@ export default function ProductList() {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
           <input
             type="text"
-            placeholder="Buscar en inventario..."
+            placeholder="Buscar productos..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
@@ -99,11 +93,10 @@ export default function ProductList() {
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Marca</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoría</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cantidad</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unidad</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Proveedor</th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
             </tr>
           </thead>
@@ -120,11 +113,10 @@ export default function ProductList() {
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                   {product.name}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.brand || '-'}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.category}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.quantity}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.unit || '-'}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${product.price.toLocaleString()}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.supplier}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <Link 
                     to={`/productos/editar/${product.id}`} 
@@ -159,43 +151,39 @@ export default function ProductList() {
           onClick={() => setSelectedProduct(null)}
         >
           <div className="bg-white rounded-lg shadow-lg p-6 w-96" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-xl font-bold text-gray-800 mb-4">Retirar del Inventario</h2>
+            <h2 className="text-xl font-bold text-gray-800 mb-4">Registrar producto</h2>
 
             <div className="text-sm text-gray-600 mb-2">
               <strong>Nombre:</strong> {selectedProduct.name}
             </div>
-            {selectedProduct.brand && (
-              <div className="text-sm text-gray-600 mb-2">
-                <strong>Marca:</strong> {selectedProduct.brand}
-              </div>
-            )}
             <div className="text-sm text-gray-600 mb-2">
               <strong>Categoría:</strong> {selectedProduct.category}
             </div>
-            {selectedProduct.unit && (
-              <div className="text-sm text-gray-600 mb-2">
-                <strong>Unidad:</strong> {selectedProduct.unit}
-              </div>
-            )}
             <div className="text-sm text-gray-600 mb-2">
               <strong>Proveedor:</strong> {selectedProduct.supplier}
             </div>
+            <div className="text-sm text-gray-600 mb-2">
+              <strong>Precio:</strong> ${selectedProduct.price.toLocaleString()}
+            </div>
             <div className="text-sm text-gray-600 mb-4">
-              <strong>Stock disponible:</strong> {selectedProduct.quantity}
+              <strong>Stock actual:</strong> {selectedProduct.quantity}
             </div>
 
             <input
               type="number"
-              placeholder="Cantidad a retirar"
-              value={quantityToRemove || ''}
-              onChange={(e) => setQuantityToRemove(Number(e.target.value))}
+              placeholder="Cantidad a agregar"
+              value={quantityToAdd || ''}
+              onChange={(e) => setQuantityToAdd(Number(e.target.value))}
               min="1"
-              max={selectedProduct.quantity}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 mb-3 focus:ring-2 focus:ring-orange-500"
             />
 
             <div className="text-sm font-semibold text-gray-700 mb-4">
-              Stock restante: {Math.max(0, selectedProduct.quantity - (quantityToRemove || 0))}
+              Nuevo stock: {selectedProduct.quantity + (quantityToAdd || 0)}
+            </div>
+
+            <div className="text-sm font-semibold text-gray-700 mb-4">
+              Total a pagar: ${((quantityToAdd || 0) * selectedProduct.price).toLocaleString()}
             </div>
 
             <div className="flex justify-end gap-3">
@@ -206,10 +194,10 @@ export default function ProductList() {
                 Cancelar
               </button>
               <button
-                onClick={handleRemoveQuantity}
+                onClick={handleAddQuantity}
                 className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
               >
-                Retirar
+                Registrar
               </button>
             </div>
           </div>
