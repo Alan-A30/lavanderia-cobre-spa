@@ -42,7 +42,7 @@ export default function ProductList() {
 
   const confirmDelete = async () => {
     if (productToDelete) {
-      await deleteProduct(productToDelete.id, productToDelete.name);
+      await deleteProduct(productToDelete.id);
       setProductToDelete(null);
     }
   };
@@ -113,12 +113,12 @@ export default function ProductList() {
         <table className="w-full">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Marca</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoría</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Producto</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cantidad</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unidad</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoría</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Proveedor</th>
               {isAdmin && (
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
               )}
@@ -129,19 +129,30 @@ export default function ProductList() {
               <tr
                 key={product.id}
                 onClick={(e) => handleRowClick(product, e)}
-                className={`cursor-pointer hover:bg-gray-50
+                className={`cursor-pointer hover:bg-gray-50 transition-colors
                   ${
-                    product.quantity < 10? 'bg-red-50': 
-                    product.quantity < 25? 'bg-yellow-50' : 'bg-green-50'}`}
+                    product.quantity < 10 ? 'bg-red-50' : 
+                    product.quantity < 25 ? 'bg-yellow-50' : 'bg-green-50'
+                  }`}
               >
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  {product.name}
+                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <div className="font-medium text-gray-900">{product.name}</div>
+                  {product.brand && <div className="text-gray-500 text-xs">{product.brand}</div>}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.brand || '-'}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {product.unitQuantity && product.unit ? `${product.unitQuantity} ${product.unit}` : '-'}
+                </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.category}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.quantity}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.unit || '-'}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <span className={`font-semibold ${
+                    product.quantity < 10 ? 'text-red-600' :
+                    product.quantity < 25 ? 'text-yellow-600' : 'text-green-600'
+                  }`}>
+                    {product.quantity}
+                  </span>
+                </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${product.price.toLocaleString()}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.supplier}</td>
                 {isAdmin && (
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <Link 

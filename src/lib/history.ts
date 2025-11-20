@@ -6,10 +6,10 @@ interface HistoryData {
   action: 'create' | 'update' | 'delete' | 'remove_stock' | 'add_stock';
   entityType: 'product' | 'supplier' | 'user';
   entityId: string;
+  entityName?: string;
   userId: string;
   userName: string;
   changes?: Record<string, any>;
-  entityName?: string;
 }
 
 export async function addHistoryRecord(data: HistoryData) {

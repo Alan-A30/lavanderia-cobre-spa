@@ -8,12 +8,13 @@ import { useSuppliers } from '@/hooks/useSuppliers';
 
 const productSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido'),
-  quantity: z.number().min(0, 'La cantidad debe ser mayor o igual a 0'),
+  brand: z.string().optional(),
+  unitQuantity: z.number().optional(),
+  unit: z.string().optional(),
+  quantity: z.number().min(0, 'El stock debe ser mayor o igual a 0'),
   price: z.number().min(0, 'El precio debe ser mayor o igual a 0'),
   category: z.string().min(1, 'La categoría es requerida'),
   supplier: z.string().min(1, 'El proveedor es requerido'),
-  brand: z.string().min(1, 'La marca es requerida'),
-  unit: z.string().min(1, 'La unidad de medida es requerida'),
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
@@ -40,12 +41,13 @@ export default function ProductForm() {
       if (product) {
         reset({
           name: product.name,
+          brand: product.brand || '',
+          unitQuantity: product.unitQuantity || undefined,
+          unit: product.unit || '',
           quantity: product.quantity,
           price: product.price,
           category: product.category,
           supplier: product.supplier,
-          brand: product.brand || '',
-          unit: product.unit || '',
         });
       }
     }
@@ -54,10 +56,16 @@ export default function ProductForm() {
   const onSubmit = async (data: ProductFormData) => {
     setLoading(true);
     try {
+      // Limpiar campos opcionales vacíos
+      const cleanData: any = { ...data };
+      if (!cleanData.brand) delete cleanData.brand;
+      if (!cleanData.unitQuantity) delete cleanData.unitQuantity;
+      if (!cleanData.unit) delete cleanData.unit;
+
       if (id) {
-        await updateProduct(id, data);
+        await updateProduct(id, cleanData);
       } else {
-        await addProduct(data);
+        await addProduct(cleanData);
       }
       navigate('/productos');
     } catch (error) {
@@ -67,18 +75,8 @@ export default function ProductForm() {
     }
   };
 
-  const categories = ['Detergentes', 'Suavizantes', 'Blanqueadores', 'Accesorios', 'Otros'];
-  const units = [
-    'Litros (L)',
-    'Mililitros (ml)',
-    'Kilogramos (kg)',
-    'Gramos (g)',
-    'Metros (m)',
-    'Centímetros (cm)',
-    'Unidades (un)',
-    'Paquetes (paq)',
-    'Cajas (caj)'
-  ];
+  const categories = ['Detergentes', 'Suavizantes', 'Blanqueadores', 'Quitamanchas', 'Desinfectantes', 'Jabones', 'Accesorios', 'Especiales', 'Limpieza', 'Desechables', 'Otros'];
+  const units = ['Litros', 'ml', 'kg', 'gramos', 'metros', 'cm', 'Unidades', 'Paquetes', 'Cajas'];
 
   return (
     <div className="p-8">
@@ -102,45 +100,51 @@ export default function ProductForm() {
             )}
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Marca
+            </label>
+            <input
+              type="text"
+              {...register('brand')}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            />
+          </div>
+
           <div className="grid grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Marca *
+                Cantidad
               </label>
               <input
-                type="text"
-                {...register('brand')}
-                placeholder="Ej: Tide, Ariel, Clorox"
+                type="number"
+                step="0.01"
+                {...register('unitQuantity', { valueAsNumber: true })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                placeholder="Ej: 3, 5, 10"
               />
-              {errors.brand && (
-                <p className="mt-1 text-sm text-red-600">{errors.brand.message}</p>
-              )}
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Unidad de Medida *
+                Unidad de Medida
               </label>
               <select
                 {...register('unit')}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               >
-                <option value="">Selecciona una unidad</option>
+                <option value="">Selecciona unidad</option>
                 {units.map(unit => (
                   <option key={unit} value={unit}>{unit}</option>
                 ))}
               </select>
-              {errors.unit && (
-                <p className="mt-1 text-sm text-red-600">{errors.unit.message}</p>
-              )}
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Cantidad *
+                Stock *
               </label>
               <input
                 type="number"

@@ -13,6 +13,7 @@ export interface Product {
   category: string;
   supplier: string;
   brand: string;
+  unitQuantity: number;
   unit: string;
   createdAt: Date;
   updatedAt: Date;
@@ -32,9 +33,9 @@ export interface HistoryRecord {
   action: 'create' | 'update' | 'delete' | 'remove_stock' | 'add_stock';
   entityType: 'product' | 'supplier' | 'user';
   entityId: string;
+  entityName?: string;
   userId: string;
   userName: string;
   timestamp: Date;
   changes?: Record<string, any>;
-  entityName?: string;
 }

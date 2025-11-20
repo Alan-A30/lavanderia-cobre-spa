@@ -8,15 +8,14 @@ import {
   query,
   orderBy,
   Timestamp,
-  onSnapshot,
-  getDoc
+  onSnapshot
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { COLLECTIONS } from '@/lib/collections';
 import { Product } from '@/types';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { addHistoryRecord } from '@/lib/history';
+import { COLLECTIONS } from '@/lib/collections';
 
 export function useProducts() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -57,9 +56,9 @@ export function useProducts() {
         action: 'create',
         entityType: 'product',
         entityId: docRef.id,
+        entityName: productData.name,
         userId: user!.uid,
         userName: user!.displayName,
-        entityName: productData.name,
         changes: productData,
       });
 
@@ -75,22 +74,21 @@ export function useProducts() {
   const updateProduct = async (id: string, productData: Partial<Product>) => {
     try {
       const productRef = doc(db, COLLECTIONS.products, id);
-      
-      const productDoc = await getDoc(productRef);
-      const productName = productDoc.data()?.name || '';
-
       await updateDoc(productRef, {
         ...productData,
         updatedAt: Timestamp.now(),
       });
 
+      const product = products.find(p => p.id === id);
+      const productName = product?.name || 'Producto';
+
       await addHistoryRecord({
         action: 'update',
         entityType: 'product',
         entityId: id,
+        entityName: productName,
         userId: user!.uid,
         userName: user!.displayName,
-        entityName: productName,
         changes: productData,
       });
 
@@ -102,85 +100,20 @@ export function useProducts() {
     }
   };
 
-  const removeFromInventory = async (id: string, quantityToRemove: number, productName: string) => {
+  const deleteProduct = async (id: string) => {
     try {
-      const productRef = doc(db, COLLECTIONS.products, id);
-      const productDoc = await getDoc(productRef);
-      const currentQuantity = productDoc.data()?.quantity || 0;
-      const newQuantity = currentQuantity - quantityToRemove;
+      const product = products.find(p => p.id === id);
+      const productName = product?.name || 'Producto';
 
-      await updateDoc(productRef, {
-        quantity: newQuantity,
-        updatedAt: Timestamp.now(),
-      });
-
-      await addHistoryRecord({
-        action: 'remove_stock',
-        entityType: 'product',
-        entityId: id,
-        userId: user!.uid,
-        userName: user!.displayName,
-        entityName: productName,
-        changes: { 
-          quantityRemoved: quantityToRemove,
-          previousQuantity: currentQuantity,
-          newQuantity: newQuantity
-        },
-      });
-
-      toast.success(`Se retiraron ${quantityToRemove} unidades de ${productName}`);
-    } catch (error) {
-      console.error('Error removing from inventory:', error);
-      toast.error('Error al retirar del inventario');
-      throw error;
-    }
-  };
-
-  const addToInventory = async (id: string, quantityToAdd: number, productName: string) => {
-    try {
-      const productRef = doc(db, COLLECTIONS.products, id);
-      const productDoc = await getDoc(productRef);
-      const currentQuantity = productDoc.data()?.quantity || 0;
-      const newQuantity = currentQuantity + quantityToAdd;
-
-      await updateDoc(productRef, {
-        quantity: newQuantity,
-        updatedAt: Timestamp.now(),
-      });
-
-      await addHistoryRecord({
-        action: 'add_stock',
-        entityType: 'product',
-        entityId: id,
-        userId: user!.uid,
-        userName: user!.displayName,
-        entityName: productName,
-        changes: { 
-          quantityAdded: quantityToAdd,
-          previousQuantity: currentQuantity,
-          newQuantity: newQuantity
-        },
-      });
-
-      toast.success(`Se agregaron ${quantityToAdd} unidades de ${productName}`);
-    } catch (error) {
-      console.error('Error adding to inventory:', error);
-      toast.error('Error al agregar al inventario');
-      throw error;
-    }
-  };
-
-  const deleteProduct = async (id: string, productName: string) => {
-    try {
       await deleteDoc(doc(db, COLLECTIONS.products, id));
 
       await addHistoryRecord({
         action: 'delete',
         entityType: 'product',
         entityId: id,
+        entityName: productName,
         userId: user!.uid,
         userName: user!.displayName,
-        entityName: productName,
       });
 
       toast.success('Producto eliminado exitosamente');
@@ -191,13 +124,77 @@ export function useProducts() {
     }
   };
 
-  return { 
-    products, 
-    loading, 
-    addProduct, 
-    updateProduct, 
-    deleteProduct,
-    removeFromInventory,
-    addToInventory
+  const removeFromInventory = async (id: string, quantity: number, productName: string) => {
+    try {
+      const product = products.find(p => p.id === id);
+      if (!product) {
+        toast.error('Producto no encontrado');
+        return;
+      }
+
+      const newQuantity = product.quantity - quantity;
+      if (newQuantity < 0) {
+        toast.error('No puedes retirar más de lo disponible');
+        return;
+      }
+
+      const productRef = doc(db, COLLECTIONS.products, id);
+      await updateDoc(productRef, {
+        quantity: newQuantity,
+        updatedAt: Timestamp.now(),
+      });
+
+      await addHistoryRecord({
+        action: 'remove_stock',
+        entityType: 'product',
+        entityId: id,
+        entityName: productName,
+        userId: user!.uid,
+        userName: user!.displayName,
+        changes: { quantity: -quantity },
+      });
+
+      toast.success('Stock retirado exitosamente');
+    } catch (error) {
+      console.error('Error removing from inventory:', error);
+      toast.error('Error al retirar del inventario');
+      throw error;
+    }
   };
+
+  const addToInventory = async (id: string, quantity: number, productName: string) => {
+    try {
+      const product = products.find(p => p.id === id);
+      if (!product) {
+        toast.error('Producto no encontrado');
+        return;
+      }
+
+      const newQuantity = product.quantity + quantity;
+
+      const productRef = doc(db, COLLECTIONS.products, id);
+      await updateDoc(productRef, {
+        quantity: newQuantity,
+        updatedAt: Timestamp.now(),
+      });
+
+      await addHistoryRecord({
+        action: 'add_stock',
+        entityType: 'product',
+        entityId: id,
+        entityName: productName,
+        userId: user!.uid,
+        userName: user!.displayName,
+        changes: { quantity: +quantity },
+      });
+
+      toast.success('Stock agregado exitosamente');
+    } catch (error) {
+      console.error('Error adding to inventory:', error);
+      toast.error('Error al agregar al inventario');
+      throw error;
+    }
+  };
+
+  return { products, loading, addProduct, updateProduct, deleteProduct, removeFromInventory, addToInventory };
 }
