@@ -11,6 +11,7 @@ import {
   onSnapshot
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { COLLECTIONS } from '@/lib/collections';
 import { Supplier } from '@/types';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -22,7 +23,7 @@ export function useSuppliers() {
   const { user } = useAuth();
 
   useEffect(() => {
-    const q = query(collection(db, 'suppliers'), orderBy('createdAt', 'desc'));
+    const q = query(collection(db, COLLECTIONS.suppliers), orderBy('createdAt', 'desc'));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const suppliersData = snapshot.docs.map(doc => ({
@@ -33,10 +34,6 @@ export function useSuppliers() {
       
       setSuppliers(suppliersData);
       setLoading(false);
-    }, (error) => {
-      console.error('Error fetching suppliers:', error);
-      toast.error('Error al cargar proveedores');
-      setLoading(false);
     });
 
     return () => unsubscribe();
@@ -44,7 +41,7 @@ export function useSuppliers() {
 
   const addSupplier = async (supplierData: Omit<Supplier, 'id' | 'createdAt'>) => {
     try {
-      const docRef = await addDoc(collection(db, 'suppliers'), {
+      const docRef = await addDoc(collection(db, COLLECTIONS.suppliers), {
         ...supplierData,
         createdAt: Timestamp.now(),
       });
@@ -69,8 +66,7 @@ export function useSuppliers() {
 
   const updateSupplier = async (id: string, supplierData: Partial<Supplier>) => {
     try {
-      const supplierRef = doc(db, 'suppliers', id);
-      await updateDoc(supplierRef, supplierData);
+      await updateDoc(doc(db, COLLECTIONS.suppliers, id), supplierData);
 
       await addHistoryRecord({
         action: 'update',
@@ -91,7 +87,7 @@ export function useSuppliers() {
 
   const deleteSupplier = async (id: string) => {
     try {
-      await deleteDoc(doc(db, 'suppliers', id));
+      await deleteDoc(doc(db, COLLECTIONS.suppliers, id));
 
       await addHistoryRecord({
         action: 'delete',

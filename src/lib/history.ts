@@ -1,5 +1,6 @@
 import { addDoc, collection, Timestamp } from 'firebase/firestore';
 import { db } from './firebase';
+import { COLLECTIONS } from './collections';
 
 interface HistoryData {
   action: 'create' | 'update' | 'delete' | 'remove_stock' | 'add_stock';
@@ -13,7 +14,7 @@ interface HistoryData {
 
 export async function addHistoryRecord(data: HistoryData) {
   try {
-    await addDoc(collection(db, 'history'), {
+    await addDoc(collection(db, COLLECTIONS.history), {
       ...data,
       timestamp: Timestamp.now(),
     });

@@ -12,6 +12,7 @@ import {
   getDoc
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { COLLECTIONS } from '@/lib/collections';
 import { Product } from '@/types';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -23,7 +24,7 @@ export function useProducts() {
   const { user } = useAuth();
 
   useEffect(() => {
-    const q = query(collection(db, 'products'), orderBy('createdAt', 'desc'));
+    const q = query(collection(db, COLLECTIONS.products), orderBy('createdAt', 'desc'));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const productsData = snapshot.docs.map(doc => ({
@@ -46,7 +47,7 @@ export function useProducts() {
 
   const addProduct = async (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
-      const docRef = await addDoc(collection(db, 'products'), {
+      const docRef = await addDoc(collection(db, COLLECTIONS.products), {
         ...productData,
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
@@ -73,7 +74,7 @@ export function useProducts() {
 
   const updateProduct = async (id: string, productData: Partial<Product>) => {
     try {
-      const productRef = doc(db, 'products', id);
+      const productRef = doc(db, COLLECTIONS.products, id);
       
       const productDoc = await getDoc(productRef);
       const productName = productDoc.data()?.name || '';
@@ -103,7 +104,7 @@ export function useProducts() {
 
   const removeFromInventory = async (id: string, quantityToRemove: number, productName: string) => {
     try {
-      const productRef = doc(db, 'products', id);
+      const productRef = doc(db, COLLECTIONS.products, id);
       const productDoc = await getDoc(productRef);
       const currentQuantity = productDoc.data()?.quantity || 0;
       const newQuantity = currentQuantity - quantityToRemove;
@@ -137,7 +138,7 @@ export function useProducts() {
 
   const addToInventory = async (id: string, quantityToAdd: number, productName: string) => {
     try {
-      const productRef = doc(db, 'products', id);
+      const productRef = doc(db, COLLECTIONS.products, id);
       const productDoc = await getDoc(productRef);
       const currentQuantity = productDoc.data()?.quantity || 0;
       const newQuantity = currentQuantity + quantityToAdd;
@@ -171,7 +172,7 @@ export function useProducts() {
 
   const deleteProduct = async (id: string, productName: string) => {
     try {
-      await deleteDoc(doc(db, 'products', id));
+      await deleteDoc(doc(db, COLLECTIONS.products, id));
 
       await addHistoryRecord({
         action: 'delete',

@@ -4,8 +4,9 @@ import {
   signOut as firebaseSignOut,
   onAuthStateChanged,
 } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
+import { COLLECTIONS } from '@/lib/collections';
 import { User } from '@/types';
 
 interface AuthContextType {
@@ -25,18 +26,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         try {
-          // Intentar obtener el rol desde Firestore
-          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+          const userDocRef = doc(db, COLLECTIONS.users, firebaseUser.uid);
+          const userDoc = await getDoc(userDocRef);
           const userData = userDoc.data();
-          
-          setUser({
-            uid: firebaseUser.uid,
-            email: firebaseUser.email!,
-            displayName: firebaseUser.displayName || userData?.displayName || 'Usuario',
-            role: userData?.role || 'operario' // Por defecto: operario
-          });
+
+          if (userData) {
+            await updateDoc(userDocRef, {
+              ultimo_acceso: Timestamp.now()
+            });
+
+            const rol = userData.rol || userData.role || 'operario';
+            
+            let mappedRole: 'admin' | 'operario' = 'operario';
+            if (rol === 'administrador' || rol === 'admin') {
+              mappedRole = 'admin';
+            }
+
+            setUser({
+              uid: firebaseUser.uid,
+              email: userData.correo || userData.email || firebaseUser.email!,
+              displayName: userData.nombre || userData.displayName || 'Usuario',
+              role: mappedRole
+            });
+          } else {
+            setUser({
+              uid: firebaseUser.uid,
+              email: firebaseUser.email!,
+              displayName: firebaseUser.displayName || 'Usuario',
+              role: 'operario'
+            });
+          }
         } catch (error) {
-          console.error('Error al obtener rol del usuario:', error);
+          console.error('Error al obtener datos del usuario:', error);
           setUser({
             uid: firebaseUser.uid,
             email: firebaseUser.email!,
