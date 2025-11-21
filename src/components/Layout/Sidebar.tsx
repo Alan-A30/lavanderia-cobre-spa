@@ -6,12 +6,18 @@ import {
   FileText, 
   LogOut,
   PlusCircle,
-  List
+  List,
+  X
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 
-export function Sidebar() {
+interface SidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const location = useLocation();
   const { user, signOut } = useAuth();
 
@@ -65,7 +71,22 @@ export function Sidebar() {
   const menuItems = user?.role === 'admin' ? adminMenuItems : operarioMenuItems;
 
   return (
-    <aside className="w-64 bg-gradient-to-b from-orange-500 to-orange-600 text-white min-h-screen fixed left-0 top-0">
+    <aside 
+      className={cn(
+        "w-64 bg-gradient-to-b from-orange-500 to-orange-600 text-white min-h-screen fixed left-0 top-0 z-40 transition-transform duration-300",
+        "lg:translate-x-0",
+        isOpen ? "translate-x-0" : "-translate-x-full"
+      )}
+    >
+      {/* Botón cerrar para móvil */}
+      <button
+        onClick={onClose}
+        className="lg:hidden absolute top-4 right-4 p-2 hover:bg-white/10 rounded-lg transition-colors"
+        aria-label="Close menu"
+      >
+        <X size={24} />
+      </button>
+
       {/* Logo y Nombre */}
       <div className="p-4">
         {/* Contenedor blanco para el logo */}
@@ -101,7 +122,7 @@ export function Sidebar() {
       </div>
 
       {/* Menú de navegación */}
-      <nav className="mt-2">
+      <nav className="mt-2 overflow-y-auto max-h-[calc(100vh-400px)]">
         {menuItems.map((section) => (
           <div key={section.title} className="mb-6">
             <h3 className="px-6 text-xs font-semibold text-orange-200 uppercase tracking-wider mb-2">
@@ -116,6 +137,7 @@ export function Sidebar() {
                   <li key={item.path}>
                     <Link
                       to={item.path}
+                      onClick={() => onClose()}
                       className={cn(
                         "flex items-center gap-3 px-6 py-3 hover:bg-white/10 transition-colors",
                         isActive && "bg-white/20 border-l-4 border-white"

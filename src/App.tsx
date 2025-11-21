@@ -2,6 +2,8 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Sidebar } from './components/Layout/Sidebar';
+import { useState } from 'react';
+import { Menu } from 'lucide-react';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import ProductList from './pages/Products/ProductList';
@@ -13,6 +15,7 @@ import History from './pages/History';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   if (loading) {
     return (
@@ -27,9 +30,29 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex">
-      <Sidebar />
-      <main className="ml-64 flex-1 min-h-screen bg-gradient-to-br from-orange-50 to-orange-100">
+    <div className="flex min-h-screen">
+      {/* Botón hamburguesa para móvil */}
+      <button
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-orange-500 text-white rounded-lg shadow-lg hover:bg-orange-600 transition-colors"
+        aria-label="Toggle menu"
+      >
+        <Menu size={24} />
+      </button>
+
+      {/* Overlay para móvil */}
+      {sidebarOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-30"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+
+      {/* Contenido principal */}
+      <main className="flex-1 min-h-screen bg-gradient-to-br from-orange-50 to-orange-100 lg:ml-64">
         {children}
       </main>
     </div>
@@ -39,6 +62,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 // Componente para rutas solo de administrador
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   if (loading) {
     return (
@@ -57,9 +81,29 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex">
-      <Sidebar />
-      <main className="ml-64 flex-1 min-h-screen bg-gradient-to-br from-orange-50 to-orange-100">
+    <div className="flex min-h-screen">
+      {/* Botón hamburguesa para móvil */}
+      <button
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-orange-500 text-white rounded-lg shadow-lg hover:bg-orange-600 transition-colors"
+        aria-label="Toggle menu"
+      >
+        <Menu size={24} />
+      </button>
+
+      {/* Overlay para móvil */}
+      {sidebarOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-30"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+
+      {/* Contenido principal */}
+      <main className="flex-1 min-h-screen bg-gradient-to-br from-orange-50 to-orange-100 lg:ml-64">
         {children}
       </main>
     </div>

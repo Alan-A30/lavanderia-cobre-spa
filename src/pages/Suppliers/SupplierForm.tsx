@@ -60,13 +60,13 @@ export default function SupplierForm() {
   };
 
   return (
-    <div className="p-8">
-      <h1 className="text-3xl font-bold text-gray-800 mb-8">
+    <div className="p-4 sm:p-6 lg:p-8 pt-16 lg:pt-8">
+      <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-6 sm:mb-8">
         {id ? 'Editar Proveedor' : 'Crear Proveedor'}
       </h1>
 
-      <div className="bg-white rounded-lg shadow-md p-8 max-w-2xl">
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 lg:p-8 max-w-2xl">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Nombre del Proveedor *
@@ -74,10 +74,10 @@ export default function SupplierForm() {
             <input
               type="text"
               {...register('name')}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             />
             {errors.name && (
-              <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
+              <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.name.message}</p>
             )}
           </div>
 
@@ -88,10 +88,10 @@ export default function SupplierForm() {
             <input
               type="email"
               {...register('email')}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             />
             {errors.email && (
-              <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+              <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.email.message}</p>
             )}
           </div>
 
@@ -102,10 +102,10 @@ export default function SupplierForm() {
             <input
               type="tel"
               {...register('phone')}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             />
             {errors.phone && (
-              <p className="mt-1 text-sm text-red-600">{errors.phone.message}</p>
+              <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.phone.message}</p>
             )}
           </div>
 
@@ -116,25 +116,25 @@ export default function SupplierForm() {
             <textarea
               {...register('address')}
               rows={3}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             />
             {errors.address && (
-              <p className="mt-1 text-sm text-red-600">{errors.address.message}</p>
+              <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.address.message}</p>
             )}
           </div>
 
-          <div className="flex gap-4">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-2">
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 bg-orange-500 text-white py-3 rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50"
+              className="w-full sm:flex-1 bg-orange-500 text-white py-2.5 sm:py-3 rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 text-sm sm:text-base font-medium"
             >
               {loading ? 'Guardando...' : id ? 'Actualizar' : 'Crear'}
             </button>
             <button
               type="button"
               onClick={() => navigate('/proveedores')}
-              className="flex-1 bg-gray-300 text-gray-700 py-3 rounded-lg hover:bg-gray-400 transition-colors"
+              className="w-full sm:flex-1 bg-gray-300 text-gray-700 py-2.5 sm:py-3 rounded-lg hover:bg-gray-400 transition-colors text-sm sm:text-base font-medium"
             >
               Cancelar
             </button>

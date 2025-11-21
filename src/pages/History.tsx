@@ -9,30 +9,30 @@ export default function History() {
   const getActionIcon = (action: string) => {
     switch (action) {
       case 'create':
-        return <PlusCircle size={20} className="text-green-600" />;
+        return <PlusCircle size={18} className="text-green-600 sm:w-5 sm:h-5" />;
       case 'update':
-        return <Pencil size={20} className="text-blue-600" />;
+        return <Pencil size={18} className="text-blue-600 sm:w-5 sm:h-5" />;
       case 'delete':
-        return <Trash2 size={20} className="text-red-600" />;
+        return <Trash2 size={18} className="text-red-600 sm:w-5 sm:h-5" />;
       case 'add_stock':
-        return <PlusCircle size={20} className="text-green-600" />;
+        return <PlusCircle size={18} className="text-green-600 sm:w-5 sm:h-5" />;
       case 'remove_stock':
-        return <MinusCircle size={20} className="text-orange-600" />;
+        return <MinusCircle size={18} className="text-orange-600 sm:w-5 sm:h-5" />;
       default:
-        return <FileText size={20} className="text-gray-600" />;
+        return <FileText size={18} className="text-gray-600 sm:w-5 sm:h-5" />;
     }
   };
 
   const getEntityIcon = (entityType: string) => {
     switch (entityType) {
       case 'product':
-        return <Package size={20} className="text-orange-600" />;
+        return <Package size={18} className="text-orange-600 sm:w-5 sm:h-5" />;
       case 'supplier':
-        return <Users size={20} className="text-purple-600" />;
+        return <Users size={18} className="text-purple-600 sm:w-5 sm:h-5" />;
       case 'user':
-        return <UserPlus size={20} className="text-teal-600" />;
+        return <UserPlus size={18} className="text-teal-600 sm:w-5 sm:h-5" />;
       default:
-        return <FileText size={20} className="text-gray-600" />;
+        return <FileText size={18} className="text-gray-600 sm:w-5 sm:h-5" />;
     }
   };
 
@@ -91,9 +91,9 @@ export default function History() {
             : String(value);
 
           return (
-            <div key={key} className="flex gap-2">
-              <span className="font-medium text-gray-700 min-w-[120px]">{label}:</span>
-              <span className="text-gray-600">{displayValue}</span>
+            <div key={key} className="flex flex-col sm:flex-row sm:gap-2">
+              <span className="font-medium text-gray-700 sm:min-w-[120px]">{label}:</span>
+              <span className="text-gray-600 break-words">{displayValue}</span>
             </div>
           );
         })}
@@ -103,43 +103,43 @@ export default function History() {
 
   if (loading) {
     return (
-      <div className="p-8 flex items-center justify-center">
-        <div className="text-xl">Cargando historial...</div>
+      <div className="p-4 sm:p-6 lg:p-8 pt-16 lg:pt-8 flex items-center justify-center">
+        <div className="text-lg sm:text-xl">Cargando historial...</div>
       </div>
     );
   }
 
   return (
-    <div className="p-8">
-      <h1 className="text-3xl font-bold text-gray-800 mb-8">Historial de Actividades</h1>
+    <div className="p-4 sm:p-6 lg:p-8 pt-16 lg:pt-8">
+      <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-6 sm:mb-8">Historial de Actividades</h1>
 
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <div className="divide-y divide-gray-200">
           {history.map((record) => (
-            <div key={record.id} className="p-6 hover:bg-gray-50 transition-colors">
-              <div className="flex items-start gap-4">
-                <div className="flex gap-2 mt-1">
+            <div key={record.id} className="p-4 sm:p-6 hover:bg-gray-50 transition-colors">
+              <div className="flex items-start gap-3 sm:gap-4">
+                <div className="flex gap-2 mt-1 flex-shrink-0">
                   {getEntityIcon(record.entityType)}
                   {getActionIcon(record.action)}
                 </div>
                 
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-gray-900">
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+                    <p className="text-sm sm:text-base text-gray-900">
                       <span className="font-semibold">{record.userName}</span>
                       {' '}{getActionText(record.action)}{' '}
                       {record.entityName && (
-                        <span className="font-medium text-orange-600">"{record.entityName}"</span>
+                        <span className="font-medium text-orange-600 break-words">"{record.entityName}"</span>
                       )}
                     </p>
-                    <span className="text-sm text-gray-500">
-                      {format(record.timestamp, "dd 'de' MMMM, yyyy - HH:mm", { locale: es })}
+                    <span className="text-xs sm:text-sm text-gray-500 whitespace-nowrap">
+                      {format(record.timestamp, "dd/MM/yyyy HH:mm", { locale: es })}
                     </span>
                   </div>
                   
                   {record.changes && (
-                    <div className="mt-2 p-4 bg-gray-50 rounded text-sm">
-                      <p className="text-gray-600 font-medium mb-3">Detalles:</p>
+                    <div className="mt-2 p-3 sm:p-4 bg-gray-50 rounded text-xs sm:text-sm">
+                      <p className="text-gray-600 font-medium mb-2 sm:mb-3">Detalles:</p>
                       {formatChanges(record.changes)}
                     </div>
                   )}
@@ -150,7 +150,7 @@ export default function History() {
         </div>
 
         {history.length === 0 && (
-          <div className="p-12 text-center text-gray-500">
+          <div className="p-8 sm:p-12 text-center text-gray-500">
             No hay actividades registradas
           </div>
         )}
