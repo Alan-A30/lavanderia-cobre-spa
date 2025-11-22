@@ -19,31 +19,29 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Clave para guardar la sesión en el navegador
+// Clave para persistencia local
 const SESSION_KEY = 'lavanderia_cobre_session';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  // 1. Inicializamos el estado leyendo directamente del localStorage (Súper rápido)
+  // Inicializar leyendo del localStorage para carga instantánea
   const [user, setUser] = useState<User | null>(() => {
     const stored = localStorage.getItem(SESSION_KEY);
     return stored ? JSON.parse(stored) : null;
   });
 
-  // Si ya leímos un usuario del storage, no estamos cargando
   const [loading, setLoading] = useState(!user);
 
-  // Helper para guardar sesión localmente
   const saveUserSession = (userData: User) => {
     setUser(userData);
     localStorage.setItem(SESSION_KEY, JSON.stringify(userData));
   };
 
-  // Helper para borrar sesión
   const clearUserSession = () => {
     setUser(null);
     localStorage.removeItem(SESSION_KEY);
   };
 
+  // Buscar usuario en Firestore y mapear roles
   const fetchAndSetUser = async (uid: string, email: string, displayName: string) => {
     try {
       const userDocRef = doc(db, COLLECTIONS.users, uid);
@@ -51,21 +49,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const userData = userDoc.data();
 
       if (userData) {
-        // Actualizamos el último acceso en segundo plano (sin bloquear)
+        // Actualizar último acceso en segundo plano
         updateDoc(userDocRef, { ultimo_acceso: Timestamp.now() }).catch(console.error);
 
         const rol = userData.rol || userData.role || 'operario';
+        
         let mappedRole: 'admin' | 'operario' = 'operario';
-        if (rol === 'administrador' || rol === 'admin') mappedRole = 'admin';
+
+        // --- CAMBIO AQUÍ: Ahora 'recepcionista' también es 'admin' en este proyecto ---
+        if (rol === 'administrador' || rol === 'admin' || rol === 'recepcionista') {
+          mappedRole = 'admin';
+        }
 
         const newUser: User = {
           uid: uid,
           email: userData.correo || userData.email || email,
           displayName: userData.nombre || userData.displayName || displayName,
-          role: mappedRole
+          role: mappedRole // Se asigna el rol con permisos elevados
         };
 
-        // Guardamos en el estado Y en el almacenamiento local
         saveUserSession(newUser);
         return true;
       }
@@ -80,19 +82,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (firebaseUser) {
         await fetchAndSetUser(firebaseUser.uid, firebaseUser.email || '', firebaseUser.displayName || '');
       }
-      // Nota: No borramos el usuario si firebaseUser es null, confiamos en nuestra sesión local 
-      // (login por token) hasta que se llame explícitamente a signOut.
       setLoading(false);
     });
 
     return unsubscribe;
   }, []);
 
+  // Login mediante token en URL (UID)
   const loginWithToken = async (uid: string): Promise<boolean> => {
-    // Si ya estamos logueados con ese mismo ID, no hacemos nada (velocidad)
     if (user?.uid === uid) return true;
 
     setLoading(true);
+    // Usamos datos genéricos ya que vienen de la intranet principal
     const success = await fetchAndSetUser(uid, 'usuario@intranet.cl', 'Usuario Vinculado');
     setLoading(false);
     return success;
@@ -104,7 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     await firebaseSignOut(auth);
-    clearUserSession(); // Borramos la sesión local al salir
+    clearUserSession();
   };
 
   return (
