@@ -54,10 +54,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const rol = userData.rol || userData.role || 'operario';
         
+        // Por defecto el rol es 'operario'
         let mappedRole: 'admin' | 'operario' = 'operario';
 
-        // --- CAMBIO AQUÍ: Ahora 'recepcionista' también es 'admin' en este proyecto ---
-        if (rol === 'administrador' || rol === 'admin' || rol === 'recepcionista') {
+        // CORRECCIÓN: Solo 'admin' o 'administrador' obtienen permisos de admin.
+        // 'recepcionista' no cumple esta condición, así que se quedará como 'operario'.
+        if (rol === 'administrador' || rol === 'admin') {
           mappedRole = 'admin';
         }
 
@@ -65,7 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           uid: uid,
           email: userData.correo || userData.email || email,
           displayName: userData.nombre || userData.displayName || displayName,
-          role: mappedRole // Se asigna el rol con permisos elevados
+          role: mappedRole // Aquí se guardará como 'operario' si es recepcionista
         };
 
         saveUserSession(newUser);
