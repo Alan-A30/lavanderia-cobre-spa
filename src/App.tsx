@@ -12,49 +12,54 @@ import SupplierList from './pages/Suppliers/SupplierList';
 import SupplierForm from './pages/Suppliers/SupplierForm';
 import History from './pages/History';
 
-// IMPORTANTE: Cambia esto por la URL real de tu proyecto principal
+// URL principal de la intranet para redirecciones
 const MAIN_INTRANET_URL = "https://lavanderia-cobre-landingpage.vercel.app/intranet/dashboard";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading, loginWithToken } = useAuth();
+  const { user, loginWithToken } = useAuth();
   const [searchParams] = useSearchParams();
   
-  // Si ya tenemos usuario (del localStorage), NO estamos verificando. Carga instantánea.
-  const [isVerifying, setIsVerifying] = useState(!user);
+  const [isVerifying, setIsVerifying] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const authToken = searchParams.get('auth_token');
 
   useEffect(() => {
     const verifyAccess = async () => {
-      // 1. Si el usuario ya existe (recuperado de localStorage), pasamos directo
+      // CASO 1: Viene un token en la URL (PRIORIDAD MÁXIMA)
+      if (authToken) {
+        // Si no hay usuario logueado O el usuario guardado es diferente al token nuevo
+        if (!user || user.uid !== authToken) {
+          const success = await loginWithToken(authToken);
+          if (!success) {
+            window.location.href = MAIN_INTRANET_URL;
+            return;
+          }
+        }
+        // Si el usuario ya coincidía o se logueó con éxito
+        setIsVerifying(false);
+        return;
+      }
+
+      // CASO 2: No hay token en URL, pero ya hay sesión guardada
       if (user) {
         setIsVerifying(false);
         return;
       }
 
-      // 2. Solo si NO hay usuario, verificamos el token de la URL
-      if (authToken) {
-        const success = await loginWithToken(authToken);
-        if (!success) {
-          window.location.href = MAIN_INTRANET_URL;
-        }
-        setIsVerifying(false);
-      } else if (!loading) {
-        // 3. Sin usuario y sin token -> Fuera
-        window.location.href = MAIN_INTRANET_URL;
-      }
+      // CASO 3: Ni token ni usuario -> Redirigir fuera
+      window.location.href = MAIN_INTRANET_URL;
     };
 
     verifyAccess();
-  }, [user, loading, authToken, loginWithToken]);
+  }, [authToken, user, loginWithToken]);
 
-  if (loading || isVerifying) {
+  if (isVerifying) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-100 to-orange-200">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
-          <div className="text-xl font-semibold text-orange-600">Conectando...</div>
+          <div className="text-xl font-semibold text-orange-600">Validando credenciales...</div>
         </div>
       </div>
     );

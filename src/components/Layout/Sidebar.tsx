@@ -17,9 +17,12 @@ interface SidebarProps {
   onClose: () => void;
 }
 
+// Debe coincidir con la URL en App.tsx
+const MAIN_INTRANET_URL = "https://lavanderia-cobre-landingpage.vercel.app/intranet/dashboard";
+
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const location = useLocation();
-  const { user, signOut } = useAuth();
+  const { user } = useAuth(); // Ya no necesitamos signOut aquí
 
   // Menú completo para ADMINISTRADOR
   const adminMenuItems = [
@@ -154,14 +157,14 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         ))}
       </nav>
 
-      {/* Botón de cerrar sesión */}
-      <button
-        onClick={() => signOut()}
-        className="absolute bottom-6 left-4 right-4 flex items-center justify-center gap-2 py-3 bg-red-500 hover:bg-red-600 rounded-lg transition-colors"
+      {/* Botón de Volver a Intranet (reemplaza cerrar sesión) */}
+      <a
+        href={MAIN_INTRANET_URL}
+        className="absolute bottom-6 left-4 right-4 flex items-center justify-center gap-2 py-3 bg-orange-700/50 hover:bg-orange-700 rounded-lg transition-colors text-white no-underline"
       >
-        <LogOut size={20} />
-        <span>Cerrar Sesión</span>
-      </button>
+        <LogOut size={20} className="rotate-180" />
+        <span>Volver a Intranet</span>
+      </a>
     </aside>
   );
 }
