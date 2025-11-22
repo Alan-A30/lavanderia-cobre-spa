@@ -14,16 +14,36 @@ interface AuthContextType {
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
-  loginWithToken: (uid: string) => Promise<boolean>; // Nueva función
+  loginWithToken: (uid: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+// Clave para guardar la sesión en el navegador
+const SESSION_KEY = 'lavanderia_cobre_session';
 
-  // Función auxiliar para buscar y setear el usuario desde Firestore
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  // 1. Inicializamos el estado leyendo directamente del localStorage (Súper rápido)
+  const [user, setUser] = useState<User | null>(() => {
+    const stored = localStorage.getItem(SESSION_KEY);
+    return stored ? JSON.parse(stored) : null;
+  });
+
+  // Si ya leímos un usuario del storage, no estamos cargando
+  const [loading, setLoading] = useState(!user);
+
+  // Helper para guardar sesión localmente
+  const saveUserSession = (userData: User) => {
+    setUser(userData);
+    localStorage.setItem(SESSION_KEY, JSON.stringify(userData));
+  };
+
+  // Helper para borrar sesión
+  const clearUserSession = () => {
+    setUser(null);
+    localStorage.removeItem(SESSION_KEY);
+  };
+
   const fetchAndSetUser = async (uid: string, email: string, displayName: string) => {
     try {
       const userDocRef = doc(db, COLLECTIONS.users, uid);
@@ -31,19 +51,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const userData = userDoc.data();
 
       if (userData) {
-        // Actualizamos último acceso
-        await updateDoc(userDocRef, { ultimo_acceso: Timestamp.now() });
+        // Actualizamos el último acceso en segundo plano (sin bloquear)
+        updateDoc(userDocRef, { ultimo_acceso: Timestamp.now() }).catch(console.error);
 
         const rol = userData.rol || userData.role || 'operario';
         let mappedRole: 'admin' | 'operario' = 'operario';
         if (rol === 'administrador' || rol === 'admin') mappedRole = 'admin';
 
-        setUser({
+        const newUser: User = {
           uid: uid,
           email: userData.correo || userData.email || email,
           displayName: userData.nombre || userData.displayName || displayName,
           role: mappedRole
-        });
+        };
+
+        // Guardamos en el estado Y en el almacenamiento local
+        saveUserSession(newUser);
         return true;
       }
     } catch (error) {
@@ -55,26 +78,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // Si hay sesión de Firebase (Login tradicional), cargamos datos
         await fetchAndSetUser(firebaseUser.uid, firebaseUser.email || '', firebaseUser.displayName || '');
-      } else {
-        // Si NO hay sesión de Firebase, solo limpiamos si NO hemos hecho login por token manual
-        // (Esta es una simplificación, para mayor seguridad el token debería persistir de otra forma, 
-        // pero para este caso funciona).
-        // Para este caso específico, dejaremos que el usuario sea null inicialmente
-        if (!user) setUser(null); 
       }
+      // Nota: No borramos el usuario si firebaseUser es null, confiamos en nuestra sesión local 
+      // (login por token) hasta que se llame explícitamente a signOut.
       setLoading(false);
     });
 
     return unsubscribe;
-  }, []); // Eliminamos user de dependencias para evitar loops
+  }, []);
 
-  // --- LOGIN MANUAL CON TOKEN (UID) ---
   const loginWithToken = async (uid: string): Promise<boolean> => {
+    // Si ya estamos logueados con ese mismo ID, no hacemos nada (velocidad)
+    if (user?.uid === uid) return true;
+
     setLoading(true);
-    // Buscamos el usuario en la DB compartida usando el UID recibido
-    // Usamos datos genéricos para email/nombre ya que vienen de la otra app
     const success = await fetchAndSetUser(uid, 'usuario@intranet.cl', 'Usuario Vinculado');
     setLoading(false);
     return success;
@@ -86,9 +104,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     await firebaseSignOut(auth);
-    setUser(null);
-    // Al salir, redirigir a la intranet principal podría ser buena idea
-    // window.location.href = "URL_DE_TU_INTRANET"; 
+    clearUserSession(); // Borramos la sesión local al salir
   };
 
   return (
