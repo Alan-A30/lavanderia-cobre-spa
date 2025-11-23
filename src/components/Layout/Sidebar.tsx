@@ -17,14 +17,30 @@ interface SidebarProps {
   onClose: () => void;
 }
 
-// Debe coincidir con la URL en App.tsx
-const MAIN_INTRANET_URL = "https://lavanderia-cobre-landingpage.vercel.app/intranet/dashboard";
+// URL de tu Landing Page Principal + el parámetro que detona el cierre global
+// Asegúrate de que esta URL sea la de producción de tu Landing Page
+const MAIN_LOGOUT_URL = "https://lavanderia-el-cobre-landingpage.vercel.app/?action=logout";
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const location = useLocation();
-  const { user } = useAuth(); // Ya no necesitamos signOut aquí
+  const { user, signOut } = useAuth();
 
-  // Menú completo para ADMINISTRADOR
+  // Función Maestra de Cierre de Sesión
+  const handleLogoutAndRedirect = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    try {
+      // 1. Primero matamos la sesión local (Firebase + LocalStorage del Equipo 4)
+      await signOut();
+    } catch (error) {
+      console.error("Error al cerrar sesión local:", error);
+    } finally {
+      // 2. Redirigimos a tu Intranet Principal con la orden ?action=logout
+      // Esto forzará a la Intranet a cerrar su propia sesión al cargar
+      window.location.href = MAIN_LOGOUT_URL;
+    }
+  };
+
+  // Menús (Se mantienen igual que antes)
   const adminMenuItems = [
     { 
       title: 'PRINCIPAL', 
@@ -54,7 +70,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     }
   ];
 
-  // Menú limitado para OPERARIO
   const operarioMenuItems = [
     { 
       title: 'PRINCIPAL', 
@@ -70,7 +85,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     }
   ];
 
-  // Seleccionar menú según rol
   const menuItems = user?.role === 'admin' ? adminMenuItems : operarioMenuItems;
 
   return (
@@ -81,7 +95,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         isOpen ? "translate-x-0" : "-translate-x-full"
       )}
     >
-      {/* Botón cerrar para móvil */}
       <button
         onClick={onClose}
         className="lg:hidden absolute top-4 right-4 p-2 hover:bg-white/10 rounded-lg transition-colors"
@@ -90,9 +103,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         <X size={24} />
       </button>
 
-      {/* Logo y Nombre */}
       <div className="p-4">
-        {/* Contenedor blanco para el logo */}
         <div className="bg-white rounded-lg p-4 shadow-md mb-3 flex items-center justify-center">
           <img 
             src="/logo.png" 
@@ -101,22 +112,20 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           />
         </div>
         
-        {/* Nombre de la empresa */}
         <h1 className="text-lg font-bold text-center text-white leading-tight">
           Lavandería<br />el Cobre<br />"SPA"
         </h1>
       </div>
 
-      {/* Usuario Info */}
       <div className="px-4 py-3 bg-white/10 mx-2 rounded-lg mb-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-orange-300 rounded-full flex items-center justify-center flex-shrink-0">
             <span className="text-orange-800 font-semibold">
-              {user?.displayName.charAt(0)}
+              {user?.displayName ? user.displayName.charAt(0).toUpperCase() : 'U'}
             </span>
           </div>
           <div className="min-w-0 flex-1">
-            <p className="font-medium truncate">{user?.displayName}</p>
+            <p className="font-medium truncate">{user?.displayName || 'Usuario'}</p>
             <p className="text-xs text-orange-100 capitalize">
               {user?.role === 'admin' ? 'Administrador' : 'Operario'}
             </p>
@@ -124,7 +133,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         </div>
       </div>
 
-      {/* Menú de navegación */}
       <nav className="mt-2 overflow-y-auto max-h-[calc(100vh-400px)]">
         {menuItems.map((section) => (
           <div key={section.title} className="mb-6">
@@ -135,7 +143,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               {section.items.map((item) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.path;
-                
                 return (
                   <li key={item.path}>
                     <Link
@@ -157,14 +164,14 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         ))}
       </nav>
 
-      {/* Botón de Volver a Intranet (reemplaza cerrar sesión) */}
-      <a
-        href={MAIN_INTRANET_URL}
-        className="absolute bottom-6 left-4 right-4 flex items-center justify-center gap-2 py-3 bg-orange-700/50 hover:bg-orange-700 rounded-lg transition-colors text-white no-underline"
+      {/* BOTÓN DE CIERRE DE SESIÓN REAL */}
+      <button
+        onClick={handleLogoutAndRedirect}
+        className="absolute bottom-6 left-4 right-4 flex items-center justify-center gap-2 py-3 bg-red-600/90 hover:bg-red-700 rounded-lg transition-colors text-white cursor-pointer shadow-lg font-semibold"
       >
-        <LogOut size={20} className="rotate-180" />
-        <span>Volver a Intranet</span>
-      </a>
+        <LogOut size={20} />
+        <span>Cerrar Sesión</span>
+      </button>
     </aside>
   );
 }

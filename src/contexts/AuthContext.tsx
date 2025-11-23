@@ -4,7 +4,7 @@ import {
   signOut as firebaseSignOut,
   onAuthStateChanged,
 } from 'firebase/auth';
-import { doc, getDoc, updateDoc, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/lib/collections';
 import { User } from '@/types';
@@ -15,15 +15,14 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   loginWithToken: (uid: string) => Promise<boolean>;
+  loginAsGuest: () => void; // Nueva función
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Clave para persistencia local
 const SESSION_KEY = 'lavanderia_cobre_session';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  // Inicializar leyendo del localStorage para carga instantánea
   const [user, setUser] = useState<User | null>(() => {
     const stored = localStorage.getItem(SESSION_KEY);
     return stored ? JSON.parse(stored) : null;
@@ -41,48 +40,71 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem(SESSION_KEY);
   };
 
-  // Buscar usuario en Firestore y mapear roles
-  const fetchAndSetUser = async (uid: string, email: string, displayName: string) => {
+  // Función para iniciar como invitado/prueba
+  const loginAsGuest = () => {
+    const guestUser: User = {
+      uid: 'guest-user',
+      email: 'prueba@elcobre.cl',
+      displayName: 'Usuario de Prueba',
+      role: 'admin' // Le damos admin para que pueda probar todo
+    };
+    saveUserSession(guestUser);
+    setLoading(false);
+  };
+
+  const fetchAndSetUser = async (uid: string, email?: string, displayName?: string) => {
     try {
       const userDocRef = doc(db, COLLECTIONS.users, uid);
       const userDoc = await getDoc(userDocRef);
-      const userData = userDoc.data();
+      
+      let role: 'admin' | 'operario' = 'operario';
+      let name = displayName || 'Usuario Intranet';
+      let userEmail = email || 'usuario@elcobre.cl';
 
-      if (userData) {
-        // Actualizar último acceso en segundo plano
-        updateDoc(userDocRef, { ultimo_acceso: Timestamp.now() }).catch(console.error);
-
-        const rol = userData.rol || userData.role || 'operario';
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        updateDoc(userDocRef, { ultimo_acceso: serverTimestamp() }).catch(console.error);
         
-        // Por defecto el rol es 'operario'
-        let mappedRole: 'admin' | 'operario' = 'operario';
-
-        // CORRECCIÓN: Solo 'admin' o 'administrador' obtienen permisos de admin.
-        // 'recepcionista' no cumple esta condición, así que se quedará como 'operario'.
-        if (rol === 'administrador' || rol === 'admin') {
-          mappedRole = 'admin';
+        name = data.nombre || data.displayName || name;
+        userEmail = data.correo || data.email || userEmail;
+        
+        if (data.rol === 'administrador' || data.role === 'admin') {
+          role = 'admin';
         }
-
-        const newUser: User = {
-          uid: uid,
-          email: userData.correo || userData.email || email,
-          displayName: userData.nombre || userData.displayName || displayName,
-          role: mappedRole // Aquí se guardará como 'operario' si es recepcionista
-        };
-
-        saveUserSession(newUser);
-        return true;
+      } else {
+        // Si el usuario viene de la intranet pero no está en esta BD, lo dejamos pasar como operario
+        // o admin según necesites. Por seguridad, default a operario, pero en modo prueba
+        // podrías cambiarlo.
+        console.log("Usuario externo nuevo detectado.");
       }
+
+      const newUser: User = {
+        uid,
+        email: userEmail,
+        displayName: name,
+        role
+      };
+
+      saveUserSession(newUser);
+      return true;
     } catch (error) {
       console.error('Error obteniendo usuario:', error);
+      return false;
     }
-    return false;
   };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        await fetchAndSetUser(firebaseUser.uid, firebaseUser.email || '', firebaseUser.displayName || '');
+        if (!user || user.uid !== firebaseUser.uid) {
+            await fetchAndSetUser(firebaseUser.uid, firebaseUser.email || '', firebaseUser.displayName || '');
+        }
+      } else {
+        // Solo limpiamos si NO hay un token en la URL (para no romper el flujo de entrada)
+        if (!window.location.search.includes('auth_token')) {
+             // No forzamos logout aquí para permitir el modo invitado persistente
+             // clearUserSession(); 
+        }
       }
       setLoading(false);
     });
@@ -90,15 +112,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return unsubscribe;
   }, []);
 
-  // Login mediante token en URL (UID)
   const loginWithToken = async (uid: string): Promise<boolean> => {
     if (user?.uid === uid) return true;
-
-    setLoading(true);
-    // Usamos datos genéricos ya que vienen de la intranet principal
-    const success = await fetchAndSetUser(uid, 'usuario@intranet.cl', 'Usuario Vinculado');
-    setLoading(false);
-    return success;
+    return await fetchAndSetUser(uid);
   };
 
   const signIn = async (email: string, password: string) => {
@@ -111,7 +127,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signOut, loginWithToken }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signOut, loginWithToken, loginAsGuest }}>
       {children}
     </AuthContext.Provider>
   );

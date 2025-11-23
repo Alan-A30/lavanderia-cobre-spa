@@ -1,9 +1,9 @@
-import { BrowserRouter, Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
-import { Toaster } from 'sonner';
+import { BrowserRouter, Routes, Route, useSearchParams } from 'react-router-dom';
+import { Toaster, toast } from 'sonner';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Sidebar } from './components/Layout/Sidebar';
 import { useState, useEffect } from 'react';
-import { Menu } from 'lucide-react';
+import { Menu, XCircle } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
 import ProductList from './pages/Products/ProductList';
 import ProductForm from './pages/Products/ProductForm';
@@ -12,60 +12,43 @@ import SupplierList from './pages/Suppliers/SupplierList';
 import SupplierForm from './pages/Suppliers/SupplierForm';
 import History from './pages/History';
 
-// URL principal de la intranet para redirecciones
-const MAIN_INTRANET_URL = "https://lavanderia-cobre-landingpage.vercel.app/intranet/dashboard";
+// Eliminada la constante LANDING_URL que no se usaba aquí
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loginWithToken } = useAuth();
+  const { user, loginWithToken, loginAsGuest } = useAuth();
   const [searchParams] = useSearchParams();
-  
-  const [isVerifying, setIsVerifying] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
+  
   const authToken = searchParams.get('auth_token');
 
   useEffect(() => {
-    const verifyAccess = async () => {
-      // CASO 1: Viene un token en la URL (PRIORIDAD MÁXIMA)
-      if (authToken) {
-        // Si no hay usuario logueado O el usuario guardado es diferente al token nuevo
-        if (!user || user.uid !== authToken) {
-          const success = await loginWithToken(authToken);
-          if (!success) {
-            window.location.href = MAIN_INTRANET_URL;
-            return;
-          }
+    const initAuth = async () => {
+      // CASO 1: Viene token de Intranet
+      if (authToken && (!user || user.uid !== authToken)) {
+        const success = await loginWithToken(authToken);
+        if (success) {
+          toast.success("Sesión sincronizada correctamente");
+          // Limpiar la URL visualmente
+          window.history.replaceState({}, document.title, window.location.pathname);
+        } else {
+          // Si falla, entrar como invitado
+          loginAsGuest();
+          toast.warning("Error validando credenciales. Ingresando como Usuario de Prueba.");
         }
-        // Si el usuario ya coincidía o se logueó con éxito
-        setIsVerifying(false);
-        return;
+      } 
+      // CASO 2: No hay usuario ni token (Entrada directa)
+      else if (!user && !authToken) {
+        loginAsGuest();
+        toast.info("Acceso directo detectado. Ingresando como Usuario de Prueba.");
       }
-
-      // CASO 2: No hay token en URL, pero ya hay sesión guardada
-      if (user) {
-        setIsVerifying(false);
-        return;
-      }
-
-      // CASO 3: Ni token ni usuario -> Redirigir fuera
-      window.location.href = MAIN_INTRANET_URL;
     };
+    initAuth();
+  }, [authToken, user, loginWithToken, loginAsGuest]);
 
-    verifyAccess();
-  }, [authToken, user, loginWithToken]);
-
-  if (isVerifying) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-100 to-orange-200">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
-          <div className="text-xl font-semibold text-orange-600">Validando credenciales...</div>
-        </div>
-      </div>
-    );
+  // Loader simple mientras se resuelve la sesión
+  if (!user) {
+    return <div className="min-h-screen bg-white" />; 
   }
-
-  if (!user) return null;
 
   return (
     <div className="flex min-h-screen">
@@ -96,36 +79,29 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   
-  if (!user) return <Navigate to="/" />;
+  if (!user) return null;
 
   if (user.role !== 'admin') {
     return (
-      <div className="p-8 text-center">
-        <h1 className="text-2xl font-bold text-red-600">Acceso Restringido</h1>
-        <p>Se requieren permisos de administrador.</p>
-        <button onClick={() => window.history.back()} className="mt-4 text-blue-600 underline">Volver</button>
+      <div className="min-h-screen flex items-center justify-center bg-orange-50 p-4">
+        <div className="bg-white p-8 rounded-xl shadow-lg text-center max-w-md w-full border border-red-100">
+          <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+            <XCircle size={32} />
+          </div>
+          <h1 className="text-xl font-bold text-gray-800 mb-2">Acceso Restringido</h1>
+          <p className="text-gray-600 mb-6 text-sm">Esta sección es exclusiva para administradores.</p>
+          <button 
+            onClick={() => window.history.back()} 
+            className="w-full py-2.5 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors"
+          >
+            Volver atrás
+          </button>
+        </div>
       </div>
     );
   }
 
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  return (
-    <div className="flex min-h-screen">
-      <button
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-orange-500 text-white rounded-lg shadow-lg"
-      >
-        <Menu size={24} />
-      </button>
-      {sidebarOpen && (
-        <div className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-30" onClick={() => setSidebarOpen(false)} />
-      )}
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <main className="flex-1 min-h-screen bg-gradient-to-br from-orange-50 to-orange-100 lg:ml-64">
-        {children}
-      </main>
-    </div>
-  );
+  return <>{children}</>;
 }
 
 function App() {
@@ -136,13 +112,28 @@ function App() {
         <Routes>
           <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/productos" element={<ProtectedRoute><ProductList /></ProtectedRoute>} />
-          <Route path="/productos/crear" element={<AdminRoute><ProductForm /></AdminRoute>} />
-          <Route path="/productos/editar/:id" element={<AdminRoute><ProductForm /></AdminRoute>} />
-          <Route path="/productos/registrar" element={<AdminRoute><ProductRegister /></AdminRoute>} />
-          <Route path="/proveedores" element={<AdminRoute><SupplierList /></AdminRoute>} />
-          <Route path="/proveedores/crear" element={<AdminRoute><SupplierForm /></AdminRoute>} />
-          <Route path="/proveedores/editar/:id" element={<AdminRoute><SupplierForm /></AdminRoute>} />
-          <Route path="/historial" element={<AdminRoute><History /></AdminRoute>} />
+          
+          <Route path="/productos/crear" element={
+            <ProtectedRoute><AdminRoute><ProductForm /></AdminRoute></ProtectedRoute>
+          } />
+          <Route path="/productos/editar/:id" element={
+            <ProtectedRoute><AdminRoute><ProductForm /></AdminRoute></ProtectedRoute>
+          } />
+          <Route path="/productos/registrar" element={
+            <ProtectedRoute><AdminRoute><ProductRegister /></AdminRoute></ProtectedRoute>
+          } />
+          <Route path="/proveedores" element={
+            <ProtectedRoute><AdminRoute><SupplierList /></AdminRoute></ProtectedRoute>
+          } />
+          <Route path="/proveedores/crear" element={
+            <ProtectedRoute><AdminRoute><SupplierForm /></AdminRoute></ProtectedRoute>
+          } />
+          <Route path="/proveedores/editar/:id" element={
+            <ProtectedRoute><AdminRoute><SupplierForm /></AdminRoute></ProtectedRoute>
+          } />
+          <Route path="/historial" element={
+            <ProtectedRoute><AdminRoute><History /></AdminRoute></ProtectedRoute>
+          } />
         </Routes>
       </AuthProvider>
     </BrowserRouter>
