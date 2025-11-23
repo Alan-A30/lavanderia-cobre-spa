@@ -15,7 +15,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   loginWithToken: (uid: string) => Promise<boolean>;
-  loginAsGuest: () => void; // Nueva función
+  loginAsGuest: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -40,13 +40,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem(SESSION_KEY);
   };
 
-  // Función para iniciar como invitado/prueba
   const loginAsGuest = () => {
     const guestUser: User = {
       uid: 'guest-user',
       email: 'prueba@elcobre.cl',
       displayName: 'Usuario de Prueba',
-      role: 'admin' // Le damos admin para que pueda probar todo
+      role: 'admin'
     };
     saveUserSession(guestUser);
     setLoading(false);
@@ -71,11 +70,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (data.rol === 'administrador' || data.role === 'admin') {
           role = 'admin';
         }
-      } else {
-        // Si el usuario viene de la intranet pero no está en esta BD, lo dejamos pasar como operario
-        // o admin según necesites. Por seguridad, default a operario, pero en modo prueba
-        // podrías cambiarlo.
-        console.log("Usuario externo nuevo detectado.");
       }
 
       const newUser: User = {
@@ -98,12 +92,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (firebaseUser) {
         if (!user || user.uid !== firebaseUser.uid) {
             await fetchAndSetUser(firebaseUser.uid, firebaseUser.email || '', firebaseUser.displayName || '');
-        }
-      } else {
-        // Solo limpiamos si NO hay un token en la URL (para no romper el flujo de entrada)
-        if (!window.location.search.includes('auth_token')) {
-             // No forzamos logout aquí para permitir el modo invitado persistente
-             // clearUserSession(); 
         }
       }
       setLoading(false);

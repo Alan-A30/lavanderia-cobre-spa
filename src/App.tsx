@@ -12,8 +12,6 @@ import SupplierList from './pages/Suppliers/SupplierList';
 import SupplierForm from './pages/Suppliers/SupplierForm';
 import History from './pages/History';
 
-// Eliminada la constante LANDING_URL que no se usaba aquí
-
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loginWithToken, loginAsGuest } = useAuth();
   const [searchParams] = useSearchParams();
@@ -23,29 +21,24 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const initAuth = async () => {
-      // CASO 1: Viene token de Intranet
+      // 1. Intento de Login con Token
       if (authToken && (!user || user.uid !== authToken)) {
         const success = await loginWithToken(authToken);
         if (success) {
-          toast.success("Sesión sincronizada correctamente");
-          // Limpiar la URL visualmente
+          toast.success("Sesión sincronizada");
           window.history.replaceState({}, document.title, window.location.pathname);
         } else {
-          // Si falla, entrar como invitado
-          loginAsGuest();
-          toast.warning("Error validando credenciales. Ingresando como Usuario de Prueba.");
+          loginAsGuest(); // Fallback a invitado
         }
       } 
-      // CASO 2: No hay usuario ni token (Entrada directa)
+      // 2. Entrada directa sin token -> Invitado
       else if (!user && !authToken) {
         loginAsGuest();
-        toast.info("Acceso directo detectado. Ingresando como Usuario de Prueba.");
       }
     };
     initAuth();
   }, [authToken, user, loginWithToken, loginAsGuest]);
 
-  // Loader simple mientras se resuelve la sesión
   if (!user) {
     return <div className="min-h-screen bg-white" />; 
   }
@@ -55,7 +48,6 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
         className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-orange-500 text-white rounded-lg shadow-lg hover:bg-orange-600 transition-colors"
-        aria-label="Toggle menu"
       >
         <Menu size={24} />
       </button>
@@ -83,7 +75,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 
   if (user.role !== 'admin') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-orange-50 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-orange-50 p-4 lg:ml-64">
         <div className="bg-white p-8 rounded-xl shadow-lg text-center max-w-md w-full border border-red-100">
           <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
             <XCircle size={32} />
