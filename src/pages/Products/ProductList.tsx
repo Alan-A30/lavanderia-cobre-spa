@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useProducts } from '@/hooks/useProducts';
 import { Link } from 'react-router-dom';
-import { Pencil, Trash2, Plus, Search } from 'lucide-react';
+import { Pencil, Trash2, Plus, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -9,6 +9,12 @@ export default function ProductList() {
   const { products, loading, deleteProduct, removeFromInventory } = useProducts();
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Estados de filtros
+  const [selectedBrand, setSelectedBrand] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedSupplier, setSelectedSupplier] = useState('');
+  const [selectedStock, setSelectedStock] = useState(''); // Nuevo filtro de stock
 
   const [selectedProduct, setSelectedProduct] = useState<{
     id: string;
@@ -30,10 +36,62 @@ export default function ProductList() {
 
   const isAdmin = user?.role === 'admin';
 
-  const filteredProducts = products.filter((product) =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.category.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Obtener opciones únicas para filtros
+  const brands = useMemo(() => {
+    const uniqueBrands = [...new Set(products.map(p => p.brand).filter(Boolean))];
+    return uniqueBrands.sort();
+  }, [products]);
+
+  const categories = useMemo(() => {
+    const uniqueCategories = [...new Set(products.map(p => p.category))];
+    return uniqueCategories.sort();
+  }, [products]);
+
+  const suppliers = useMemo(() => {
+    const uniqueSuppliers = [...new Set(products.map(p => p.supplier))];
+    return uniqueSuppliers.sort();
+  }, [products]);
+
+  // Opciones de filtro de stock
+  const stockOptions = [
+    { value: '', label: 'Todos los niveles' },
+    { value: 'bajo', label: 'Stock Bajo (< 10)' },
+    { value: 'medio', label: 'Stock Medio (10-25)' },
+    { value: 'alto', label: 'Stock Alto (> 25)' },
+  ];
+
+  // Filtrar productos
+  const filteredProducts = useMemo(() => {
+    return products.filter((product) => {
+      const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           product.category.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesBrand = !selectedBrand || product.brand === selectedBrand;
+      const matchesCategory = !selectedCategory || product.category === selectedCategory;
+      const matchesSupplier = !selectedSupplier || product.supplier === selectedSupplier;
+      
+      // Filtro de stock
+      let matchesStock = true;
+      if (selectedStock === 'bajo') {
+        matchesStock = product.quantity < 10;
+      } else if (selectedStock === 'medio') {
+        matchesStock = product.quantity >= 10 && product.quantity <= 25;
+      } else if (selectedStock === 'alto') {
+        matchesStock = product.quantity > 25;
+      }
+
+      return matchesSearch && matchesBrand && matchesCategory && matchesSupplier && matchesStock;
+    });
+  }, [products, searchTerm, selectedBrand, selectedCategory, selectedSupplier, selectedStock]);
+
+  const clearFilters = () => {
+    setSelectedBrand('');
+    setSelectedCategory('');
+    setSelectedSupplier('');
+    setSelectedStock('');
+    setSearchTerm('');
+  };
+
+  const activeFiltersCount = [selectedBrand, selectedCategory, selectedSupplier, selectedStock].filter(Boolean).length;
 
   const handleDeleteClick = (id: string, name: string, event: any) => {
     event.stopPropagation();
@@ -96,8 +154,9 @@ export default function ProductList() {
         )}
       </div>
 
+      {/* Barra de búsqueda */}
       <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-4 sm:mb-6">
-        <div className="relative">
+        <div className="relative mb-4">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
           <input
             type="text"
@@ -107,6 +166,84 @@ export default function ProductList() {
             className="w-full pl-10 pr-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
           />
         </div>
+
+        {/* Filtros siempre visibles */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-gray-700">Filtros</h3>
+            {activeFiltersCount > 0 && (
+              <button
+                onClick={clearFilters}
+                className="flex items-center gap-1 text-xs text-orange-600 hover:text-orange-700 font-medium"
+              >
+                <X size={14} />
+                Limpiar ({activeFiltersCount})
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1.5">Marca</label>
+              <select
+                value={selectedBrand}
+                onChange={(e) => setSelectedBrand(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+              >
+                <option value="">Todas las marcas</option>
+                {brands.map(brand => (
+                  <option key={brand} value={brand}>{brand}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1.5">Categoría</label>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+              >
+                <option value="">Todas las categorías</option>
+                {categories.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1.5">Proveedor</label>
+              <select
+                value={selectedSupplier}
+                onChange={(e) => setSelectedSupplier(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+              >
+                <option value="">Todos los proveedores</option>
+                {suppliers.map(sup => (
+                  <option key={sup} value={sup}>{sup}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1.5">Nivel de Stock</label>
+              <select
+                value={selectedStock}
+                onChange={(e) => setSelectedStock(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+              >
+                {stockOptions.map(option => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Resumen de resultados */}
+      <div className="mb-4 text-sm text-gray-600">
+        Mostrando <span className="font-semibold">{filteredProducts.length}</span> de <span className="font-semibold">{products.length}</span> productos
       </div>
 
       {/* Tabla para desktop */}
@@ -258,7 +395,7 @@ export default function ProductList() {
         )}
       </div>
 
-      {/* Modal retirar producto - RESPONSIVE */}
+      {/* Modal retirar producto */}
       {selectedProduct && (
         <div 
           className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50 p-4"
@@ -324,7 +461,7 @@ export default function ProductList() {
         </div>
       )}
 
-      {/* Modal eliminar producto - RESPONSIVE */}
+      {/* Modal eliminar producto */}
       {productToDelete && (
         <div 
           className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50 p-4"
