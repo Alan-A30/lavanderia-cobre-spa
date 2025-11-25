@@ -4,9 +4,10 @@ import { useProducts } from '@/hooks/useProducts';
 import { format, startOfDay, startOfWeek, startOfMonth, isAfter } from 'date-fns';
 import { es } from 'date-fns/locale';
 import {
-  FileText, Package, Users, UserPlus, Pencil, Trash2, PlusCircle,
+  FileText, Pencil, Trash2, PlusCircle,
   MinusCircle, FileDown, X, Calendar, Filter
 } from 'lucide-react';
+
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
