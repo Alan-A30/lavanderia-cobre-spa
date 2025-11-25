@@ -50,6 +50,7 @@ export function useSuppliers() {
         action: 'create',
         entityType: 'supplier',
         entityId: docRef.id,
+        entityName: supplierData.name,
         userId: user!.uid,
         userName: user!.displayName,
         changes: supplierData,
@@ -68,10 +69,14 @@ export function useSuppliers() {
     try {
       await updateDoc(doc(db, COLLECTIONS.suppliers, id), supplierData);
 
+      const supplier = suppliers.find(s => s.id === id);
+      const supplierName = supplier?.name || 'Proveedor';
+
       await addHistoryRecord({
         action: 'update',
         entityType: 'supplier',
         entityId: id,
+        entityName: supplierName,
         userId: user!.uid,
         userName: user!.displayName,
         changes: supplierData,
@@ -87,12 +92,16 @@ export function useSuppliers() {
 
   const deleteSupplier = async (id: string) => {
     try {
+      const supplier = suppliers.find(s => s.id === id);
+      const supplierName = supplier?.name || 'Proveedor';
+
       await deleteDoc(doc(db, COLLECTIONS.suppliers, id));
 
       await addHistoryRecord({
         action: 'delete',
         entityType: 'supplier',
         entityId: id,
+        entityName: supplierName,
         userId: user!.uid,
         userName: user!.displayName,
       });

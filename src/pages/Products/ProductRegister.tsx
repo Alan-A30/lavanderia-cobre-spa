@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useProducts } from '@/hooks/useProducts';
 import { Link } from 'react-router-dom';
-import { Pencil, Trash2, Search } from 'lucide-react';
+import { Pencil, Trash2, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -9,6 +9,13 @@ export default function ProductRegister() {
   const { products, loading, updateProduct, deleteProduct } = useProducts();
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Estados de filtros
+  const [selectedBrand, setSelectedBrand] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedSupplier, setSelectedSupplier] = useState('');
+  const [selectedStock, setSelectedStock] = useState('');
+
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
   const [newQuantity, setNewQuantity] = useState<number>(0);
 
@@ -19,11 +26,63 @@ export default function ProductRegister() {
 
   const isAdmin = user?.role === 'admin';
 
-  const filteredProducts = products.filter((product) =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (product.brand && product.brand.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  // Obtener opciones únicas para filtros
+  const brands = useMemo(() => {
+    const uniqueBrands = [...new Set(products.map(p => p.brand).filter(Boolean))];
+    return uniqueBrands.sort();
+  }, [products]);
+
+  const categories = useMemo(() => {
+    const uniqueCategories = [...new Set(products.map(p => p.category))];
+    return uniqueCategories.sort();
+  }, [products]);
+
+  const suppliers = useMemo(() => {
+    const uniqueSuppliers = [...new Set(products.map(p => p.supplier))];
+    return uniqueSuppliers.sort();
+  }, [products]);
+
+  // Opciones de filtro de stock
+  const stockOptions = [
+    { value: '', label: 'Todos los niveles' },
+    { value: 'bajo', label: 'Stock Bajo (< 10)' },
+    { value: 'medio', label: 'Stock Medio (10-25)' },
+    { value: 'alto', label: 'Stock Alto (> 25)' },
+  ];
+
+  // Filtrar productos
+  const filteredProducts = useMemo(() => {
+    return products.filter((product) => {
+      const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           product.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           (product.brand && product.brand.toLowerCase().includes(searchTerm.toLowerCase()));
+      const matchesBrand = !selectedBrand || product.brand === selectedBrand;
+      const matchesCategory = !selectedCategory || product.category === selectedCategory;
+      const matchesSupplier = !selectedSupplier || product.supplier === selectedSupplier;
+      
+      // Filtro de stock
+      let matchesStock = true;
+      if (selectedStock === 'bajo') {
+        matchesStock = product.quantity < 10;
+      } else if (selectedStock === 'medio') {
+        matchesStock = product.quantity >= 10 && product.quantity <= 25;
+      } else if (selectedStock === 'alto') {
+        matchesStock = product.quantity > 25;
+      }
+
+      return matchesSearch && matchesBrand && matchesCategory && matchesSupplier && matchesStock;
+    });
+  }, [products, searchTerm, selectedBrand, selectedCategory, selectedSupplier, selectedStock]);
+
+  const clearFilters = () => {
+    setSelectedBrand('');
+    setSelectedCategory('');
+    setSelectedSupplier('');
+    setSelectedStock('');
+    setSearchTerm('');
+  };
+
+  const activeFiltersCount = [selectedBrand, selectedCategory, selectedSupplier, selectedStock].filter(Boolean).length;
 
   const handleDeleteClick = (id: string, name: string, event: any) => {
     event.stopPropagation();
@@ -52,11 +111,17 @@ export default function ProductRegister() {
       return;
     }
 
+    if (newQuantity > 10000) {
+      toast.error('No puede agregar más de 10.000 unidades');
+      return;
+    }
+
     const updatedQuantity = selectedProduct.quantity + newQuantity;
-    await updateProduct(selectedProduct.id, { quantity: updatedQuantity });
+    await updateProduct(selectedProduct.id, { quantity: updatedQuantity }, true);
 
     toast.success(`Se actualizaron las existencias de ${selectedProduct.name}`);
     setSelectedProduct(null);
+    setNewQuantity(0);
   };
 
   if (loading) {
@@ -79,8 +144,9 @@ export default function ProductRegister() {
         </Link>
       </div>
 
+      {/* Barra de búsqueda y filtros */}
       <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-4 sm:mb-6">
-        <div className="relative">
+        <div className="relative mb-4">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
           <input
             type="text"
@@ -90,6 +156,84 @@ export default function ProductRegister() {
             className="w-full pl-10 pr-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
           />
         </div>
+
+        {/* Filtros siempre visibles */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-gray-700">Filtros</h3>
+            {activeFiltersCount > 0 && (
+              <button
+                onClick={clearFilters}
+                className="flex items-center gap-1 text-xs text-orange-600 hover:text-orange-700 font-medium"
+              >
+                <X size={14} />
+                Limpiar ({activeFiltersCount})
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1.5">Marca</label>
+              <select
+                value={selectedBrand}
+                onChange={(e) => setSelectedBrand(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+              >
+                <option value="">Todas las marcas</option>
+                {brands.map(brand => (
+                  <option key={brand} value={brand}>{brand}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1.5">Categoría</label>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+              >
+                <option value="">Todas las categorías</option>
+                {categories.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1.5">Proveedor</label>
+              <select
+                value={selectedSupplier}
+                onChange={(e) => setSelectedSupplier(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+              >
+                <option value="">Todos los proveedores</option>
+                {suppliers.map(sup => (
+                  <option key={sup} value={sup}>{sup}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1.5">Nivel de Stock</label>
+              <select
+                value={selectedStock}
+                onChange={(e) => setSelectedStock(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+              >
+                {stockOptions.map(option => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Resumen de resultados */}
+      <div className="mb-4 text-sm text-gray-600">
+        Mostrando <span className="font-semibold">{filteredProducts.length}</span> de <span className="font-semibold">{products.length}</span> productos
       </div>
 
       {/* Tabla para desktop */}
@@ -135,7 +279,7 @@ export default function ProductRegister() {
                       {product.quantity}
                     </span>
                   </td>
-                  <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-500">${product.price.toLocaleString()}</td>
+                  <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-500">${product.price.toLocaleString('es-CL')}</td>
                   <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.supplier}</td>
                   {isAdmin && (
                     <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -162,7 +306,7 @@ export default function ProductRegister() {
 
         {filteredProducts.length === 0 && (
           <div className="text-center py-12 text-gray-500">
-            {searchTerm ? 'No se encontraron productos con ese criterio de búsqueda' : 'No hay productos registrados'}
+            {searchTerm || activeFiltersCount > 0 ? 'No se encontraron productos con esos filtros' : 'No hay productos registrados'}
           </div>
         )}
       </div>
@@ -219,7 +363,7 @@ export default function ProductRegister() {
               </div>
               <div>
                 <span className="text-gray-500">Precio:</span>
-                <p className="font-medium text-gray-700">${product.price.toLocaleString()}</p>
+                <p className="font-medium text-gray-700">${product.price.toLocaleString('es-CL')}</p>
               </div>
               <div>
                 <span className="text-gray-500">Proveedor:</span>
@@ -237,12 +381,12 @@ export default function ProductRegister() {
 
         {filteredProducts.length === 0 && (
           <div className="bg-white rounded-lg shadow-md p-12 text-center text-gray-500">
-            {searchTerm ? 'No se encontraron productos con ese criterio de búsqueda' : 'No hay productos registrados'}
+            {searchTerm || activeFiltersCount > 0 ? 'No se encontraron productos con esos filtros' : 'No hay productos registrados'}
           </div>
         )}
       </div>
 
-      {/* Modal de registrar producto - RESPONSIVE */}
+      {/* Modal de registrar producto - CON VALIDACIÓN */}
       {selectedProduct && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 p-4" onClick={() => setSelectedProduct(null)}>
           <div className="bg-white rounded-lg shadow-xl p-4 sm:p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
@@ -269,7 +413,7 @@ export default function ProductRegister() {
                 <strong className="text-gray-700">Proveedor:</strong> {selectedProduct.supplier}
               </div>
               <div className="text-gray-600">
-                <strong className="text-gray-700">Precio unitario:</strong> ${selectedProduct.price.toLocaleString()}
+                <strong className="text-gray-700">Precio unitario:</strong> ${selectedProduct.price.toLocaleString('es-CL')}
               </div>
               <div className="text-gray-600 pb-2 border-b">
                 <strong className="text-gray-700">Stock actual:</strong> <span className="text-orange-600 font-semibold">{selectedProduct.quantity}</span>
@@ -283,12 +427,27 @@ export default function ProductRegister() {
               <input
                 type="number"
                 min="1"
+                max="10000"
                 placeholder="Ingrese la cantidad"
                 value={newQuantity || ''}
-                onChange={(e) => setNewQuantity(Number(e.target.value))}
+                onChange={(e) => {
+                  const value = Number(e.target.value);
+                  setNewQuantity(value);
+                }}
                 className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 autoFocus
               />
+              {newQuantity > 10000 && (
+                <p className="mt-1 text-xs text-red-600">
+                  No puede agregar más de 10.000 unidades
+                </p>
+              )}
+              {newQuantity > 5000 && newQuantity <= 10000 && (
+                <p className="mt-1 text-xs text-amber-600 bg-amber-50 p-2 rounded">
+                  ⚠️ Está agregando una cantidad elevada de stock
+                </p>
+              )}
+              <p className="mt-1 text-xs text-gray-500">Máximo 10.000 unidades por registro</p>
             </div>
 
             <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-4">
@@ -296,20 +455,23 @@ export default function ProductRegister() {
                 Nuevo stock: <span className="font-semibold text-gray-800">{selectedProduct.quantity + (newQuantity || 0)}</span>
               </div>
               <div className="text-base font-bold text-orange-600">
-                Total a pagar: ${((newQuantity || 0) * selectedProduct.price).toLocaleString()}
+                Total a pagar: ${((newQuantity || 0) * selectedProduct.price).toLocaleString('es-CL')}
               </div>
             </div>
 
             <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
               <button
-                onClick={() => setSelectedProduct(null)}
+                onClick={() => {
+                  setSelectedProduct(null);
+                  setNewQuantity(0);
+                }}
                 className="w-full sm:w-auto px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors text-sm"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleAddQuantity}
-                disabled={!newQuantity || newQuantity <= 0}
+                disabled={!newQuantity || newQuantity <= 0 || newQuantity > 10000}
                 className="w-full sm:w-auto px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
               >
                 Registrar
@@ -319,7 +481,7 @@ export default function ProductRegister() {
         </div>
       )}
 
-      {/* Modal de eliminar producto - RESPONSIVE */}
+      {/* Modal de eliminar producto */}
       {productToDelete && (
         <div 
           className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50 p-4"
