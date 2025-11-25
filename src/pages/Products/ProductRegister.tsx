@@ -111,11 +111,17 @@ export default function ProductRegister() {
       return;
     }
 
+    if (newQuantity > 10000) {
+      toast.error('No puede agregar más de 10.000 unidades');
+      return;
+    }
+
     const updatedQuantity = selectedProduct.quantity + newQuantity;
-    await updateProduct(selectedProduct.id, { quantity: updatedQuantity });
+    await updateProduct(selectedProduct.id, { quantity: updatedQuantity }, true);
 
     toast.success(`Se actualizaron las existencias de ${selectedProduct.name}`);
     setSelectedProduct(null);
+    setNewQuantity(0);
   };
 
   if (loading) {
@@ -273,7 +279,7 @@ export default function ProductRegister() {
                       {product.quantity}
                     </span>
                   </td>
-                  <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-500">${product.price.toLocaleString()}</td>
+                  <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-500">${product.price.toLocaleString('es-CL')}</td>
                   <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.supplier}</td>
                   {isAdmin && (
                     <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -357,7 +363,7 @@ export default function ProductRegister() {
               </div>
               <div>
                 <span className="text-gray-500">Precio:</span>
-                <p className="font-medium text-gray-700">${product.price.toLocaleString()}</p>
+                <p className="font-medium text-gray-700">${product.price.toLocaleString('es-CL')}</p>
               </div>
               <div>
                 <span className="text-gray-500">Proveedor:</span>
@@ -380,7 +386,7 @@ export default function ProductRegister() {
         )}
       </div>
 
-      {/* Modal de registrar producto */}
+      {/* Modal de registrar producto - CON VALIDACIÓN */}
       {selectedProduct && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 p-4" onClick={() => setSelectedProduct(null)}>
           <div className="bg-white rounded-lg shadow-xl p-4 sm:p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
@@ -407,7 +413,7 @@ export default function ProductRegister() {
                 <strong className="text-gray-700">Proveedor:</strong> {selectedProduct.supplier}
               </div>
               <div className="text-gray-600">
-                <strong className="text-gray-700">Precio unitario:</strong> ${selectedProduct.price.toLocaleString()}
+                <strong className="text-gray-700">Precio unitario:</strong> ${selectedProduct.price.toLocaleString('es-CL')}
               </div>
               <div className="text-gray-600 pb-2 border-b">
                 <strong className="text-gray-700">Stock actual:</strong> <span className="text-orange-600 font-semibold">{selectedProduct.quantity}</span>
@@ -421,12 +427,27 @@ export default function ProductRegister() {
               <input
                 type="number"
                 min="1"
+                max="10000"
                 placeholder="Ingrese la cantidad"
                 value={newQuantity || ''}
-                onChange={(e) => setNewQuantity(Number(e.target.value))}
+                onChange={(e) => {
+                  const value = Number(e.target.value);
+                  setNewQuantity(value);
+                }}
                 className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 autoFocus
               />
+              {newQuantity > 10000 && (
+                <p className="mt-1 text-xs text-red-600">
+                  No puede agregar más de 10.000 unidades
+                </p>
+              )}
+              {newQuantity > 5000 && newQuantity <= 10000 && (
+                <p className="mt-1 text-xs text-amber-600 bg-amber-50 p-2 rounded">
+                  ⚠️ Está agregando una cantidad elevada de stock
+                </p>
+              )}
+              <p className="mt-1 text-xs text-gray-500">Máximo 10.000 unidades por registro</p>
             </div>
 
             <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-4">
@@ -434,20 +455,23 @@ export default function ProductRegister() {
                 Nuevo stock: <span className="font-semibold text-gray-800">{selectedProduct.quantity + (newQuantity || 0)}</span>
               </div>
               <div className="text-base font-bold text-orange-600">
-                Total a pagar: ${((newQuantity || 0) * selectedProduct.price).toLocaleString()}
+                Total a pagar: ${((newQuantity || 0) * selectedProduct.price).toLocaleString('es-CL')}
               </div>
             </div>
 
             <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
               <button
-                onClick={() => setSelectedProduct(null)}
+                onClick={() => {
+                  setSelectedProduct(null);
+                  setNewQuantity(0);
+                }}
                 className="w-full sm:w-auto px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors text-sm"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleAddQuantity}
-                disabled={!newQuantity || newQuantity <= 0}
+                disabled={!newQuantity || newQuantity <= 0 || newQuantity > 10000}
                 className="w-full sm:w-auto px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
               >
                 Registrar

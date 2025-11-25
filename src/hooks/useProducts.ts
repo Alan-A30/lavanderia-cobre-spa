@@ -71,26 +71,48 @@ export function useProducts() {
     }
   };
 
-  const updateProduct = async (id: string, productData: Partial<Product>) => {
+  const updateProduct = async (id: string, productData: Partial<Product>, isRestock: boolean = false) => {
     try {
+      const product = products.find(p => p.id === id);
+      const productName = product?.name || 'Producto';
+
       const productRef = doc(db, COLLECTIONS.products, id);
       await updateDoc(productRef, {
         ...productData,
         updatedAt: Timestamp.now(),
       });
 
-      const product = products.find(p => p.id === id);
-      const productName = product?.name || 'Producto';
+      // Si es restock, registrar como add_stock
+      if (isRestock && 'quantity' in productData && product) {
+        const previousQuantity = product.quantity;
+        const newQuantity = productData.quantity!;
+        const difference = newQuantity - previousQuantity;
 
-      await addHistoryRecord({
-        action: 'update',
-        entityType: 'product',
-        entityId: id,
-        entityName: productName,
-        userId: user!.uid,
-        userName: user!.displayName,
-        changes: productData,
-      });
+        await addHistoryRecord({
+          action: 'add_stock',
+          entityType: 'product',
+          entityId: id,
+          entityName: productName,
+          userId: user!.uid,
+          userName: user!.displayName,
+          changes: { 
+            previousQuantity,
+            newQuantity,
+            quantityAdded: difference
+          },
+        });
+      } else {
+        // Actualización normal
+        await addHistoryRecord({
+          action: 'update',
+          entityType: 'product',
+          entityId: id,
+          entityName: productName,
+          userId: user!.uid,
+          userName: user!.displayName,
+          changes: productData,
+        });
+      }
 
       toast.success('Producto actualizado exitosamente');
     } catch (error) {
@@ -151,7 +173,11 @@ export function useProducts() {
         entityName: productName,
         userId: user!.uid,
         userName: user!.displayName,
-        changes: { quantity: -quantity },
+        changes: { 
+          previousQuantity: product.quantity,
+          newQuantity,
+          quantityRemoved: quantity
+        },
       });
 
       toast.success('Stock retirado exitosamente');
@@ -185,7 +211,11 @@ export function useProducts() {
         entityName: productName,
         userId: user!.uid,
         userName: user!.displayName,
-        changes: { quantity: +quantity },
+        changes: { 
+          previousQuantity: product.quantity,
+          newQuantity,
+          quantityAdded: quantity
+        },
       });
 
       toast.success('Stock agregado exitosamente');

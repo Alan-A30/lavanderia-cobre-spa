@@ -7,12 +7,24 @@ import { useProducts } from '@/hooks/useProducts';
 import { useSuppliers } from '@/hooks/useSuppliers';
 
 const productSchema = z.object({
-  name: z.string().min(1, 'El nombre es requerido'),
-  brand: z.string().optional(),
-  unitQuantity: z.number().optional(),
-  unit: z.string().optional(),
-  quantity: z.number().min(0, 'El stock debe ser mayor o igual a 0'),
-  price: z.number().min(0, 'El precio debe ser mayor o igual a 0'),
+  name: z.string()
+    .min(1, 'El nombre es requerido')
+    .max(100, 'El nombre no puede tener más de 100 caracteres')
+    .refine((val) => !/\d/.test(val), {
+      message: 'El nombre no puede contener números'
+    }),
+  brand: z.string()
+    .max(50, 'La marca no puede tener más de 50 caracteres')
+    .optional()
+    .or(z.literal('')),
+  unitQuantity: z.number().optional().or(z.nan()),
+  unit: z.string().optional().or(z.literal('')),
+  quantity: z.number()
+    .min(0, 'El stock debe ser mayor o igual a 0')
+    .max(10000, 'El stock no puede ser mayor a 10.000 unidades'),
+  price: z.number()
+    .min(0, 'El precio debe ser mayor o igual a 0')
+    .max(10000000, 'El precio no puede ser mayor a $10.000.000'),
   category: z.string().min(1, 'La categoría es requerida'),
   supplier: z.string().min(1, 'El proveedor es requerido'),
 });
@@ -31,9 +43,24 @@ export default function ProductForm() {
     handleSubmit,
     formState: { errors },
     reset,
+    watch,
   } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
+    defaultValues: {
+      name: '',
+      brand: '',
+      unitQuantity: undefined,
+      unit: '',
+      quantity: 0,
+      price: 0,
+      category: '',
+      supplier: '',
+    }
   });
+
+  const selectedSupplier = watch('supplier');
+  const currentPrice = watch('price');
+  const currentStock = watch('quantity');
 
   useEffect(() => {
     if (id) {
@@ -42,7 +69,7 @@ export default function ProductForm() {
         reset({
           name: product.name,
           brand: product.brand || '',
-          unitQuantity: product.unitQuantity || undefined,
+          unitQuantity: product.unitQuantity,
           unit: product.unit || '',
           quantity: product.quantity,
           price: product.price,
@@ -58,9 +85,9 @@ export default function ProductForm() {
     try {
       // Limpiar campos opcionales vacíos
       const cleanData: any = { ...data };
-      if (!cleanData.brand) delete cleanData.brand;
-      if (!cleanData.unitQuantity) delete cleanData.unitQuantity;
-      if (!cleanData.unit) delete cleanData.unit;
+      if (!cleanData.brand || cleanData.brand === '') delete cleanData.brand;
+      if (!cleanData.unitQuantity || isNaN(cleanData.unitQuantity)) delete cleanData.unitQuantity;
+      if (!cleanData.unit || cleanData.unit === '') delete cleanData.unit;
 
       if (id) {
         await updateProduct(id, cleanData);
@@ -75,8 +102,30 @@ export default function ProductForm() {
     }
   };
 
-  const categories = ['Detergentes', 'Suavizantes', 'Blanqueadores', 'Quitamanchas', 'Desinfectantes', 'Jabones', 'Accesorios', 'Especiales', 'Limpieza', 'Desechables', 'Otros'];
+  const categories = [
+    'Detergentes',
+    'Suavizantes',
+    'Blanqueadores',
+    'Quitamanchas',
+    'Jabones',
+    'Desinfectantes',
+    'Otros',
+    'Accesorios'
+  ];
+
   const units = ['Litros', 'ml', 'kg', 'gramos', 'metros', 'cm', 'Unidades', 'Paquetes', 'Cajas'];
+
+  // Agregar "Lavandería" como primera opción en proveedores
+  const supplierOptions = [
+    { id: 'lavanderia', name: 'Lavandería' },
+    ...suppliers
+  ];
+
+  // Formatear precio a formato chileno (punto como separador de miles)
+  const formatChileanPrice = (value: number | undefined) => {
+    if (value === undefined || isNaN(value)) return '';
+    return value.toLocaleString('es-CL');
+  };
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 pt-16 lg:pt-8">
@@ -93,11 +142,13 @@ export default function ProductForm() {
             <input
               type="text"
               {...register('name')}
+              placeholder="Ej: Detergente Ariel"
               className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             />
             {errors.name && (
               <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.name.message}</p>
             )}
+            <p className="mt-1 text-xs text-gray-500">No se permiten números en el nombre</p>
           </div>
 
           <div>
@@ -107,14 +158,20 @@ export default function ProductForm() {
             <input
               type="text"
               {...register('brand')}
+              placeholder="Ej: Ariel, Downy, etc."
+              maxLength={50}
               className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             />
+            {errors.brand && (
+              <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.brand.message}</p>
+            )}
+            <p className="mt-1 text-xs text-gray-500">Máximo 50 caracteres</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Cantidad
+                Cantidad por Unidad
               </label>
               <input
                 type="number"
@@ -123,6 +180,10 @@ export default function ProductForm() {
                 className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 placeholder="Ej: 3, 5, 10"
               />
+              {errors.unitQuantity && (
+                <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.unitQuantity.message}</p>
+              )}
+              <p className="mt-1 text-xs text-gray-500">Ej: 3 Litros, 5 kg</p>
             </div>
 
             <div>
@@ -149,26 +210,47 @@ export default function ProductForm() {
               <input
                 type="number"
                 {...register('quantity', { valueAsNumber: true })}
+                placeholder="0"
+                min="0"
+                max="10000"
                 className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               />
               {errors.quantity && (
                 <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.quantity.message}</p>
               )}
+              {currentStock > 5000 && currentStock <= 10000 && (
+                <p className="mt-1 text-xs text-amber-600 bg-amber-50 p-2 rounded">
+                  ⚠️ Está ingresando una cantidad elevada de stock
+                </p>
+              )}
+              <p className="mt-1 text-xs text-gray-500">Máximo 10.000 unidades</p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Precio *
               </label>
-              <input
-                type="number"
-                step="0.01"
-                {...register('price', { valueAsNumber: true })}
-                className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              />
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                <input
+                  type="number"
+                  step="1"
+                  {...register('price', { valueAsNumber: true })}
+                  placeholder="10000"
+                  min="0"
+                  max="10000000"
+                  className="w-full pl-8 pr-3 sm:pr-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                />
+              </div>
               {errors.price && (
                 <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.price.message}</p>
               )}
+              {currentPrice > 0 && (
+                <p className="mt-1 text-xs text-green-600">
+                  Precio: ${formatChileanPrice(currentPrice)}
+                </p>
+              )}
+              <p className="mt-1 text-xs text-gray-500">Ej: 10000, 25500, 3500</p>
             </div>
           </div>
 
@@ -199,7 +281,7 @@ export default function ProductForm() {
               className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             >
               <option value="">Selecciona un proveedor</option>
-              {suppliers.map(supplier => (
+              {supplierOptions.map(supplier => (
                 <option key={supplier.id} value={supplier.name}>
                   {supplier.name}
                 </option>
@@ -207,6 +289,11 @@ export default function ProductForm() {
             </select>
             {errors.supplier && (
               <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.supplier.message}</p>
+            )}
+            {selectedSupplier === 'Lavandería' && (
+              <p className="mt-2 text-xs text-blue-600 bg-blue-50 p-2 rounded">
+                ℹ️ Este producto fue comprado directamente por la lavandería
+              </p>
             )}
           </div>
 
