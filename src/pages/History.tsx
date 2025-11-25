@@ -42,15 +42,6 @@ export default function History() {
     }
   };
 
-  const getEntityIcon = (entityType: string) => {
-    switch (entityType) {
-      case 'product': return <Package size={18} className="text-orange-600 sm:w-5 sm:h-5" />;
-      case 'supplier': return <Users size={18} className="text-purple-600 sm:w-5 sm:h-5" />;
-      case 'user': return <UserPlus size={18} className="text-teal-600 sm:w-5 sm:h-5" />;
-      default: return <FileText size={18} className="text-gray-600 sm:w-5 sm:h-5" />;
-    }
-  };
-
   const getActionText = (action: string) => {
     const actions: Record<string, string> = {
       create: 'creó', update: 'editó', delete: 'eliminó',
@@ -60,7 +51,7 @@ export default function History() {
   };
 
 // --- FORMATEO NATURAL MEJORADO (Para PDF) ---
-const formatNaturalLanguage = (action: string, changes: any, entityType: string) => {
+const formatNaturalLanguage = (action: string, changes: any) => {
   if (!changes || typeof changes !== 'object') return 'Sin detalles';
 
   // Función helper para obtener valores numéricos seguros
@@ -69,13 +60,6 @@ const formatNaturalLanguage = (action: string, changes: any, entityType: string)
     if (val === undefined || val === null || val === '') return 'N/A';
     const num = Number(val);
     return isNaN(num) ? 'N/A' : num.toString();
-  };
-
-  // Función helper para obtener valores de texto seguros
-  const getVal = (key: string) => {
-    const val = changes[key];
-    if (val === undefined || val === null || val === '') return 'N/A';
-    return String(val);
   };
 
   switch (action) {
@@ -139,13 +123,6 @@ const formatChangesWeb = (changes: any, action: string) => {
     if (val === undefined || val === null || val === '') return defaultVal;
     const num = Number(val);
     return isNaN(num) ? defaultVal : num.toString();
-  };
-
-  // Función helper para obtener valores de texto
-  const getSafeValue = (key: string, defaultVal = '-') => {
-    const val = changes[key];
-    if (val === undefined || val === null || val === '') return defaultVal;
-    return String(val);
   };
 
   // Para movimientos de stock - MEJORADO
@@ -504,7 +481,7 @@ const formatChangesWeb = (changes: any, action: string) => {
         record.action === 'delete' ? 'ELIMINAR' :
         record.action === 'create' ? 'CREAR' : 'EDITAR',
         record.entityName || '(sin nombre)',
-        formatNaturalLanguage(record.action, record.changes, record.entityType)
+        formatNaturalLanguage(record.action, record.changes)
       ]);
 
       const doc = await generateStyledPDF(`Reporte de Movimientos - ${periodText}`, rows, false);
