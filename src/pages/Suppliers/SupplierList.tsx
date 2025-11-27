@@ -2,18 +2,26 @@ import { useState } from 'react';
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { useProducts } from '@/hooks/useProducts';
 import { Link } from 'react-router-dom';
-import { Pencil, Trash2, Plus, Search, Mail, Phone, Package, X } from 'lucide-react';
+import { Pencil, Trash2, Plus, Search, Mail, Phone, Package, X, ChevronDown } from 'lucide-react';
+
+const ITEMS_PER_PAGE = 9;
+const PRODUCTS_PER_PAGE = 6;
 
 export default function SupplierList() {
   const { suppliers, loading, deleteSupplier } = useSuppliers();
   const { products } = useProducts();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSupplier, setSelectedSupplier] = useState<string | null>(null);
+  const [displayedSuppliers, setDisplayedSuppliers] = useState(ITEMS_PER_PAGE);
+  const [displayedProducts, setDisplayedProducts] = useState(PRODUCTS_PER_PAGE);
 
   const filteredSuppliers = suppliers.filter(supplier =>
     supplier.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     supplier.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const suppliersToShow = filteredSuppliers.slice(0, displayedSuppliers);
+  const hasMoreSuppliers = displayedSuppliers < filteredSuppliers.length;
 
   const handleDelete = async (id: string, name: string) => {
     if (window.confirm(`¿Estás seguro de eliminar el proveedor "${name}"?`)) {
@@ -27,6 +35,21 @@ export default function SupplierList() {
   };
 
   const supplierProducts = selectedSupplier ? getSupplierProducts(selectedSupplier) : [];
+  const productsToShow = supplierProducts.slice(0, displayedProducts);
+  const hasMoreProducts = displayedProducts < supplierProducts.length;
+
+  const loadMoreSuppliers = () => {
+    setDisplayedSuppliers(prev => prev + ITEMS_PER_PAGE);
+  };
+
+  const loadMoreProducts = () => {
+    setDisplayedProducts(prev => prev + PRODUCTS_PER_PAGE);
+  };
+
+  const handleSupplierClick = (supplierName: string) => {
+    setSelectedSupplier(supplierName);
+    setDisplayedProducts(PRODUCTS_PER_PAGE);
+  };
 
   if (loading) {
     return (
@@ -56,14 +79,17 @@ export default function SupplierList() {
             type="text"
             placeholder="Buscar proveedores..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setDisplayedSuppliers(ITEMS_PER_PAGE);
+            }}
             className="w-full pl-10 pr-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
           />
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-        {filteredSuppliers.map((supplier) => {
+        {suppliersToShow.map((supplier) => {
           const productCount = getSupplierProducts(supplier.name).length;
           
           return (
@@ -102,7 +128,7 @@ export default function SupplierList() {
 
               {/* Botón para ver productos */}
               <button
-                onClick={() => setSelectedSupplier(supplier.name)}
+                onClick={() => handleSupplierClick(supplier.name)}
                 className="mt-4 w-full flex items-center justify-center gap-2 bg-orange-50 text-orange-600 px-4 py-2 rounded-lg hover:bg-orange-100 transition-colors text-sm font-medium"
               >
                 <Package size={16} />
@@ -119,11 +145,27 @@ export default function SupplierList() {
         </div>
       )}
 
+      {/* Botón Mostrar Más Proveedores */}
+      {hasMoreSuppliers && (
+        <div className="flex justify-center mt-6 mb-4">
+          <button
+            onClick={loadMoreSuppliers}
+            className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg transition-colors shadow-md font-medium"
+          >
+            <span>Mostrar más proveedores</span>
+            <ChevronDown size={18} />
+          </button>
+        </div>
+      )}
+
       {/* Modal de productos del proveedor */}
       {selectedSupplier && (
         <div 
           className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50 p-4"
-          onClick={() => setSelectedSupplier(null)}
+          onClick={() => {
+            setSelectedSupplier(null);
+            setDisplayedProducts(PRODUCTS_PER_PAGE);
+          }}
         >
           <div 
             className="bg-white rounded-lg shadow-lg w-full max-w-3xl max-h-[80vh] overflow-hidden"
@@ -136,7 +178,10 @@ export default function SupplierList() {
                 <p className="text-sm text-orange-100 mt-1">{supplierProducts.length} productos encontrados</p>
               </div>
               <button
-                onClick={() => setSelectedSupplier(null)}
+                onClick={() => {
+                  setSelectedSupplier(null);
+                  setDisplayedProducts(PRODUCTS_PER_PAGE);
+                }}
                 className="text-white hover:bg-orange-600 p-2 rounded-lg transition-colors"
               >
                 <X size={24} />
@@ -145,73 +190,91 @@ export default function SupplierList() {
 
             {/* Contenido */}
             <div className="p-4 sm:p-6 overflow-y-auto max-h-[calc(80vh-120px)]">
-              {supplierProducts.length === 0 ? (
+              {productsToShow.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   No hay productos de este proveedor
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {supplierProducts.map((product) => (
-                    <div
-                      key={product.id}
-                      className={`p-4 rounded-lg border-l-4 ${
-                        product.quantity < 10 ? 'bg-red-50 border-red-500' :
-                        product.quantity < 25 ? 'bg-yellow-50 border-yellow-500' :
-                        'bg-green-50 border-green-500'
-                      }`}
-                    >
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-gray-900">{product.name}</h3>
-                          {product.brand && (
-                            <p className="text-xs text-gray-500">{product.brand}</p>
-                          )}
-                        </div>
-                        <span className={`text-lg font-bold ${
-                          product.quantity < 10 ? 'text-red-600' :
-                          product.quantity < 25 ? 'text-yellow-600' :
-                          'text-green-600'
-                        }`}>
-                          {product.quantity}
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
-                        <div>
-                          <span className="text-gray-500">Categoría:</span>
-                          <p className="font-medium text-gray-700">{product.category}</p>
-                        </div>
-                        {product.unitQuantity && product.unit && (
-                          <div>
-                            <span className="text-gray-500">Cantidad:</span>
-                            <p className="font-medium text-gray-700">{product.unitQuantity} {product.unit}</p>
+                <>
+                  <div className="space-y-3">
+                    {productsToShow.map((product) => (
+                      <div
+                        key={product.id}
+                        className={`p-4 rounded-lg border-l-4 ${
+                          product.quantity < 10 ? 'bg-red-50 border-red-500' :
+                          product.quantity < 25 ? 'bg-yellow-50 border-yellow-500' :
+                          'bg-green-50 border-green-500'
+                        }`}
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-gray-900">{product.name}</h3>
+                            {product.brand && (
+                              <p className="text-xs text-gray-500">{product.brand}</p>
+                            )}
                           </div>
-                        )}
-                        <div>
-                          <span className="text-gray-500">Precio:</span>
-                          <p className="font-medium text-gray-700">${product.price.toLocaleString()}</p>
-                        </div>
-                        <div>
-                          <span className="text-gray-500">Stock:</span>
-                          <p className={`font-semibold ${
+                          <span className={`text-lg font-bold ${
                             product.quantity < 10 ? 'text-red-600' :
                             product.quantity < 25 ? 'text-yellow-600' :
                             'text-green-600'
                           }`}>
-                            {product.quantity} unidades
-                          </p>
+                            {product.quantity}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
+                          <div>
+                            <span className="text-gray-500">Categoría:</span>
+                            <p className="font-medium text-gray-700">{product.category}</p>
+                          </div>
+                          {product.unitQuantity && product.unit && (
+                            <div>
+                              <span className="text-gray-500">Cantidad:</span>
+                              <p className="font-medium text-gray-700">{product.unitQuantity} {product.unit}</p>
+                            </div>
+                          )}
+                          <div>
+                            <span className="text-gray-500">Precio:</span>
+                            <p className="font-medium text-gray-700">${product.price.toLocaleString()}</p>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Stock:</span>
+                            <p className={`font-semibold ${
+                              product.quantity < 10 ? 'text-red-600' :
+                              product.quantity < 25 ? 'text-yellow-600' :
+                              'text-green-600'
+                            }`}>
+                              {product.quantity} unidades
+                            </p>
+                          </div>
                         </div>
                       </div>
+                    ))}
+                  </div>
+
+                  {/* Botón Mostrar Más Productos dentro del modal */}
+                  {hasMoreProducts && (
+                    <div className="flex justify-center mt-4">
+                      <button
+                        onClick={loadMoreProducts}
+                        className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-6 py-2.5 rounded-lg transition-colors shadow-md font-medium text-sm"
+                      >
+                        <span>Mostrar más productos</span>
+                        <ChevronDown size={16} />
+                      </button>
                     </div>
-                  ))}
-                </div>
+                  )}
+                </>
               )}
             </div>
 
             {/* Footer */}
             <div className="bg-gray-50 px-4 sm:px-6 py-4 flex justify-end border-t">
               <button
-                onClick={() => setSelectedSupplier(null)}
+                onClick={() => {
+                  setSelectedSupplier(null);
+                  setDisplayedProducts(PRODUCTS_PER_PAGE);
+                }}
                 className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors text-sm font-medium"
               >
                 Cerrar

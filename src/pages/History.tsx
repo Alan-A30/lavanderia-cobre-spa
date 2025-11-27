@@ -5,12 +5,14 @@ import { format, startOfDay, startOfWeek, startOfMonth, isAfter } from 'date-fns
 import { es } from 'date-fns/locale';
 import {
   FileText, Pencil, Trash2, PlusCircle,
-  MinusCircle, FileDown, X, Calendar, Filter
+  MinusCircle, FileDown, X, Calendar, Filter, ChevronDown
 } from 'lucide-react';
 
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+
+const ITEMS_PER_PAGE = 15;
 
 // Función auxiliar para cargar la imagen
 const loadImage = (src: string): Promise<HTMLImageElement> => {
@@ -31,6 +33,7 @@ export default function History() {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewTimeRange, setViewTimeRange] = useState('');
   const [reportPeriod, setReportPeriod] = useState('month');
+  const [displayedItems, setDisplayedItems] = useState(ITEMS_PER_PAGE);
 
   const getActionIcon = (action: string) => {
     switch (action) {
@@ -303,11 +306,19 @@ const formatChangesWeb = (changes: any, action: string) => {
     return filterRecords(history, viewTimeRange);
   }, [history, selectedAction, selectedEntityType, viewTimeRange, searchTerm]);
 
+  const displayedHistory = filteredHistory.slice(0, displayedItems);
+  const hasMore = displayedItems < filteredHistory.length;
+
   const clearFilters = () => {
     setSelectedAction('');
     setSelectedEntityType('');
     setViewTimeRange('');
     setSearchTerm('');
+    setDisplayedItems(ITEMS_PER_PAGE);
+  };
+
+  const loadMore = () => {
+    setDisplayedItems(prev => prev + ITEMS_PER_PAGE);
   };
 
   const activeFiltersCount = [selectedAction, selectedEntityType, viewTimeRange].filter(Boolean).length;
@@ -597,7 +608,10 @@ const formatChangesWeb = (changes: any, action: string) => {
               type="text"
               placeholder="Buscar usuario, producto o proveedor..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setDisplayedItems(ITEMS_PER_PAGE);
+              }}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
             />
           </div>
@@ -618,7 +632,10 @@ const formatChangesWeb = (changes: any, action: string) => {
             <label className="block text-xs font-medium text-gray-500 mb-1">Acción</label>
             <select
               value={selectedAction}
-              onChange={(e) => setSelectedAction(e.target.value)}
+              onChange={(e) => {
+                setSelectedAction(e.target.value);
+                setDisplayedItems(ITEMS_PER_PAGE);
+              }}
               className="w-full p-2 text-sm border border-gray-300 rounded-lg focus:ring-orange-500"
             >
               <option value="">Todas</option>
@@ -634,7 +651,10 @@ const formatChangesWeb = (changes: any, action: string) => {
             <label className="block text-xs font-medium text-gray-500 mb-1">Entidad</label>
             <select
               value={selectedEntityType}
-              onChange={(e) => setSelectedEntityType(e.target.value)}
+              onChange={(e) => {
+                setSelectedEntityType(e.target.value);
+                setDisplayedItems(ITEMS_PER_PAGE);
+              }}
               className="w-full p-2 text-sm border border-gray-300 rounded-lg focus:ring-orange-500"
             >
               <option value="">Todo</option>
@@ -649,7 +669,10 @@ const formatChangesWeb = (changes: any, action: string) => {
             </label>
             <select
               value={viewTimeRange}
-              onChange={(e) => setViewTimeRange(e.target.value)}
+              onChange={(e) => {
+                setViewTimeRange(e.target.value);
+                setDisplayedItems(ITEMS_PER_PAGE);
+              }}
               className="w-full p-2 text-sm border border-gray-300 rounded-lg focus:ring-orange-500"
             >
               <option value="all">Histórico completo</option>
@@ -662,13 +685,13 @@ const formatChangesWeb = (changes: any, action: string) => {
       </div>
 
       <div className="text-sm text-gray-500 mb-4">
-        Mostrando {filteredHistory.length} registros
+        Mostrando {displayedHistory.length} de {filteredHistory.length} registros
       </div>
 
       {/* Lista de Historial MEJORADA */}
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <div className="divide-y divide-gray-200">
-          {filteredHistory.map((record) => (
+          {displayedHistory.map((record) => (
             <div key={record.id} className="p-4 hover:bg-gray-50 transition-colors">
               <div className="flex items-start gap-4">
                 <div className="mt-1 p-2 bg-gray-100 rounded-lg flex-shrink-0">
@@ -710,6 +733,19 @@ const formatChangesWeb = (changes: any, action: string) => {
           </div>
         )}
       </div>
+
+      {/* Botón Mostrar Más */}
+      {hasMore && (
+        <div className="flex justify-center mt-6 mb-4">
+          <button
+            onClick={loadMore}
+            className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg transition-colors shadow-md font-medium"
+          >
+            <span>Mostrar más</span>
+            <ChevronDown size={18} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

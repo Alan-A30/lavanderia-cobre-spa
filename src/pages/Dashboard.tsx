@@ -1,20 +1,32 @@
 import { Link } from 'react-router-dom';
-import { Package, Users, FileText, PlusCircle, AlertTriangle, TrendingUp, Clock } from 'lucide-react';
+import { Package, Users, FileText, PlusCircle, AlertTriangle, TrendingUp, Clock, ChevronDown } from 'lucide-react';
 import { useProducts } from '@/hooks/useProducts';
 import { useHistory } from '@/hooks/useHistory';
 import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useState } from 'react';
+
+const LOW_STOCK_ITEMS = 5;
+const ACTIVITY_ITEMS = 10;
 
 export default function Dashboard() {
   const { products } = useProducts();
-  const { history } = useHistory(10);
+  const { history } = useHistory(50);
   const { user } = useAuth();
+  const [displayedLowStock, setDisplayedLowStock] = useState(LOW_STOCK_ITEMS);
+  const [displayedActivity, setDisplayedActivity] = useState(ACTIVITY_ITEMS);
 
   const isAdmin = user?.role === 'admin';
 
   const lowStockProducts = products.filter(p => p.quantity < 10);
   const mediumStockProducts = products.filter(p => p.quantity >= 10 && p.quantity < 25);
+
+  const lowStockToShow = lowStockProducts.slice(0, displayedLowStock);
+  const hasMoreLowStock = displayedLowStock < lowStockProducts.length;
+
+  const activityToShow = history.slice(0, displayedActivity);
+  const hasMoreActivity = displayedActivity < history.length;
 
   const adminCards = [
     {
@@ -100,7 +112,7 @@ export default function Dashboard() {
               <h2 className="text-lg sm:text-xl font-bold text-gray-800">Productos con Bajo Stock</h2>
             </div>
             <div className="space-y-3">
-              {lowStockProducts.slice(0, 10).map((product) => (
+              {lowStockToShow.map((product) => (
                 <div key={product.id} className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
                   <div className="flex-1 min-w-0 mr-4">
                     <p className="font-semibold text-gray-800 truncate">{product.name}</p>
@@ -115,7 +127,18 @@ export default function Dashboard() {
                   </div>
                 </div>
               ))}
-              {lowStockProducts.length > 10 && (
+              
+              {hasMoreLowStock && (
+                <button
+                  onClick={() => setDisplayedLowStock(prev => prev + LOW_STOCK_ITEMS)}
+                  className="w-full flex items-center justify-center gap-2 mt-3 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2.5 rounded-lg transition-colors text-sm font-medium"
+                >
+                  <span>Mostrar más</span>
+                  <ChevronDown size={16} />
+                </button>
+              )}
+              
+              {lowStockProducts.length > LOW_STOCK_ITEMS && displayedLowStock >= lowStockProducts.length && (
                 <Link 
                   to="/productos" 
                   className="block text-center text-orange-500 hover:text-orange-600 font-medium mt-2"
@@ -177,7 +200,7 @@ export default function Dashboard() {
                 <h2 className="text-lg sm:text-xl font-bold text-gray-800">Productos con Bajo Stock</h2>
               </div>
               <div className="space-y-3">
-                {lowStockProducts.slice(0, 5).map((product) => (
+                {lowStockToShow.map((product) => (
                   <div key={product.id} className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
                     <div className="flex-1 min-w-0 mr-4">
                       <p className="font-semibold text-gray-800 truncate">{product.name}</p>
@@ -192,7 +215,18 @@ export default function Dashboard() {
                     </div>
                   </div>
                 ))}
-                {lowStockProducts.length > 5 && (
+                
+                {hasMoreLowStock && (
+                  <button
+                    onClick={() => setDisplayedLowStock(prev => prev + LOW_STOCK_ITEMS)}
+                    className="w-full flex items-center justify-center gap-2 mt-3 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2.5 rounded-lg transition-colors text-sm font-medium"
+                  >
+                    <span>Mostrar más</span>
+                    <ChevronDown size={16} />
+                  </button>
+                )}
+                
+                {lowStockProducts.length > 5 && displayedLowStock >= lowStockProducts.length && (
                   <Link 
                     to="/productos" 
                     className="block text-center text-orange-500 hover:text-orange-600 font-medium mt-2"
@@ -234,23 +268,35 @@ export default function Dashboard() {
             </div>
             
             <div className="space-y-3 max-h-[400px] lg:max-h-[600px] overflow-y-auto">
-              {history.length === 0 ? (
+              {activityToShow.length === 0 ? (
                 <p className="text-gray-500 text-sm text-center py-8">No hay actividad reciente</p>
               ) : (
-                history.map((record) => (
-                  <div key={record.id} className="border-l-4 border-orange-500 pl-3 py-2 bg-gray-50 rounded">
-                    <p className="text-xs sm:text-sm text-gray-700">
-                      <span className="font-semibold">{record.userName}</span>
-                      {' '}{getActionText(record.action)}{' '}
-                      {record.entityName && (
-                        <span className="font-medium text-orange-600 break-words">"{record.entityName}"</span>
-                      )}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {format(record.timestamp, "dd/MM/yyyy HH:mm", { locale: es })}
-                    </p>
-                  </div>
-                ))
+                <>
+                  {activityToShow.map((record) => (
+                    <div key={record.id} className="border-l-4 border-orange-500 pl-3 py-2 bg-gray-50 rounded">
+                      <p className="text-xs sm:text-sm text-gray-700">
+                        <span className="font-semibold">{record.userName}</span>
+                        {' '}{getActionText(record.action)}{' '}
+                        {record.entityName && (
+                          <span className="font-medium text-orange-600 break-words">"{record.entityName}"</span>
+                        )}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {format(record.timestamp, "dd/MM/yyyy HH:mm", { locale: es })}
+                      </p>
+                    </div>
+                  ))}
+                  
+                  {hasMoreActivity && (
+                    <button
+                      onClick={() => setDisplayedActivity(prev => prev + ACTIVITY_ITEMS)}
+                      className="w-full flex items-center justify-center gap-2 mt-3 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg transition-colors text-xs sm:text-sm font-medium"
+                    >
+                      <span>Mostrar más</span>
+                      <ChevronDown size={14} />
+                    </button>
+                  )}
+                </>
               )}
             </div>
 

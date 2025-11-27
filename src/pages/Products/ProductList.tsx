@@ -1,9 +1,11 @@
 import { useState, useMemo } from 'react';
 import { useProducts } from '@/hooks/useProducts';
 import { Link } from 'react-router-dom';
-import { Pencil, Trash2, Plus, Search, X } from 'lucide-react';
+import { Pencil, Trash2, Plus, Search, X, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+
+const ITEMS_PER_PAGE = 12;
 
 export default function ProductList() {
   const { products, loading, deleteProduct, removeFromInventory } = useProducts();
@@ -14,7 +16,10 @@ export default function ProductList() {
   const [selectedBrand, setSelectedBrand] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedSupplier, setSelectedSupplier] = useState('');
-  const [selectedStock, setSelectedStock] = useState(''); // Nuevo filtro de stock
+  const [selectedStock, setSelectedStock] = useState('');
+
+  // Estado de paginación
+  const [displayedItems, setDisplayedItems] = useState(ITEMS_PER_PAGE);
 
   const [selectedProduct, setSelectedProduct] = useState<{
     id: string;
@@ -83,12 +88,21 @@ export default function ProductList() {
     });
   }, [products, searchTerm, selectedBrand, selectedCategory, selectedSupplier, selectedStock]);
 
+  // Productos a mostrar (con paginación)
+  const displayedProducts = filteredProducts.slice(0, displayedItems);
+  const hasMore = displayedItems < filteredProducts.length;
+
   const clearFilters = () => {
     setSelectedBrand('');
     setSelectedCategory('');
     setSelectedSupplier('');
     setSelectedStock('');
     setSearchTerm('');
+    setDisplayedItems(ITEMS_PER_PAGE);
+  };
+
+  const loadMore = () => {
+    setDisplayedItems(prev => prev + ITEMS_PER_PAGE);
   };
 
   const activeFiltersCount = [selectedBrand, selectedCategory, selectedSupplier, selectedStock].filter(Boolean).length;
@@ -162,7 +176,10 @@ export default function ProductList() {
             type="text"
             placeholder="Buscar en inventario..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setDisplayedItems(ITEMS_PER_PAGE);
+            }}
             className="w-full pl-10 pr-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
           />
         </div>
@@ -187,7 +204,10 @@ export default function ProductList() {
               <label className="block text-xs font-medium text-gray-700 mb-1.5">Marca</label>
               <select
                 value={selectedBrand}
-                onChange={(e) => setSelectedBrand(e.target.value)}
+                onChange={(e) => {
+                  setSelectedBrand(e.target.value);
+                  setDisplayedItems(ITEMS_PER_PAGE);
+                }}
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
               >
                 <option value="">Todas las marcas</option>
@@ -201,7 +221,10 @@ export default function ProductList() {
               <label className="block text-xs font-medium text-gray-700 mb-1.5">Categoría</label>
               <select
                 value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
+                onChange={(e) => {
+                  setSelectedCategory(e.target.value);
+                  setDisplayedItems(ITEMS_PER_PAGE);
+                }}
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
               >
                 <option value="">Todas las categorías</option>
@@ -215,7 +238,10 @@ export default function ProductList() {
               <label className="block text-xs font-medium text-gray-700 mb-1.5">Proveedor</label>
               <select
                 value={selectedSupplier}
-                onChange={(e) => setSelectedSupplier(e.target.value)}
+                onChange={(e) => {
+                  setSelectedSupplier(e.target.value);
+                  setDisplayedItems(ITEMS_PER_PAGE);
+                }}
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
               >
                 <option value="">Todos los proveedores</option>
@@ -229,7 +255,10 @@ export default function ProductList() {
               <label className="block text-xs font-medium text-gray-700 mb-1.5">Nivel de Stock</label>
               <select
                 value={selectedStock}
-                onChange={(e) => setSelectedStock(e.target.value)}
+                onChange={(e) => {
+                  setSelectedStock(e.target.value);
+                  setDisplayedItems(ITEMS_PER_PAGE);
+                }}
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
               >
                 {stockOptions.map(option => (
@@ -243,7 +272,7 @@ export default function ProductList() {
 
       {/* Resumen de resultados */}
       <div className="mb-4 text-sm text-gray-600">
-        Mostrando <span className="font-semibold">{filteredProducts.length}</span> de <span className="font-semibold">{products.length}</span> productos
+        Mostrando <span className="font-semibold">{displayedProducts.length}</span> de <span className="font-semibold">{filteredProducts.length}</span> productos
       </div>
 
       {/* Tabla para desktop */}
@@ -264,7 +293,7 @@ export default function ProductList() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredProducts.map((product) => (
+              {displayedProducts.map((product) => (
                 <tr
                   key={product.id}
                   onClick={(e) => handleRowClick(product, e)}
@@ -322,7 +351,7 @@ export default function ProductList() {
 
       {/* Cards para móvil */}
       <div className="md:hidden space-y-3">
-        {filteredProducts.map((product) => (
+        {displayedProducts.map((product) => (
           <div
             key={product.id}
             onClick={(e) => handleRowClick(product, e)}
@@ -394,6 +423,19 @@ export default function ProductList() {
           </div>
         )}
       </div>
+
+      {/* Botón Mostrar Más */}
+      {hasMore && (
+        <div className="flex justify-center mt-6 mb-4">
+          <button
+            onClick={loadMore}
+            className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg transition-colors shadow-md font-medium"
+          >
+            <span>Mostrar más</span>
+            <ChevronDown size={18} />
+          </button>
+        </div>
+      )}
 
       {/* Modal retirar producto */}
       {selectedProduct && (
