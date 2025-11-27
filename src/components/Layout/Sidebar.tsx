@@ -71,20 +71,21 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   return (
     <aside 
       className={cn(
-        "w-64 bg-gradient-to-b from-orange-500 to-orange-600 text-white min-h-screen fixed left-0 top-0 z-40 transition-transform duration-300",
+        "w-64 bg-gradient-to-b from-orange-500 to-orange-600 text-white min-h-screen fixed left-0 top-0 z-40 transition-transform duration-300 flex flex-col",
         "lg:translate-x-0",
         isOpen ? "translate-x-0" : "-translate-x-full"
       )}
     >
       <button
         onClick={onClose}
-        className="lg:hidden absolute top-4 right-4 p-2 hover:bg-white/10 rounded-lg transition-colors"
+        className="lg:hidden absolute top-4 right-4 p-2 hover:bg-white/10 rounded-lg transition-colors z-50"
         aria-label="Close menu"
       >
         <X size={24} />
       </button>
 
-      <div className="p-4">
+      {/* Header - Logo y título (fijo) */}
+      <div className="flex-shrink-0 p-4">
         <div className="bg-white rounded-lg p-4 shadow-md mb-3 flex items-center justify-center">
           <img 
             src="/logo.png" 
@@ -97,7 +98,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         </h1>
       </div>
 
-      <div className="px-4 py-3 bg-white/10 mx-2 rounded-lg mb-4">
+      {/* Info de usuario (fijo) */}
+      <div className="flex-shrink-0 px-4 py-3 bg-white/10 mx-2 rounded-lg mb-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-orange-300 rounded-full flex items-center justify-center flex-shrink-0">
             <span className="text-orange-800 font-semibold">
@@ -113,7 +115,27 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         </div>
       </div>
 
-      <nav className="mt-2 overflow-y-auto max-h-[calc(100vh-200px)]">
+      {/* Navegación (scrollable) */}
+      <nav className="flex-1 overflow-y-auto overscroll-contain pb-4">
+        <style>
+          {`
+            /* Estilos específicos para el scroll del sidebar */
+            nav::-webkit-scrollbar {
+              width: 6px;
+            }
+            nav::-webkit-scrollbar-track {
+              background: rgba(255, 255, 255, 0.1);
+              border-radius: 10px;
+            }
+            nav::-webkit-scrollbar-thumb {
+              background: rgba(255, 255, 255, 0.3);
+              border-radius: 10px;
+            }
+            nav::-webkit-scrollbar-thumb:hover {
+              background: rgba(255, 255, 255, 0.4);
+            }
+          `}
+        </style>
         {menuItems.map((section) => (
           <div key={section.title} className="mb-6">
             <h3 className="px-6 text-xs font-semibold text-orange-200 uppercase tracking-wider mb-2">
